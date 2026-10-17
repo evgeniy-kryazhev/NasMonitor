@@ -1,20 +1,68 @@
 name: Build desktop spike
 on:
   push:
-    branches: [main, 'feat/**']
-  pull_request:
     branches: [main]
+  pull_request:
+    branches: [main, 'feat/desktop-widget-spike']
+  workflow_dispatch:
+concurrency:
+  group: desktop-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+permissions:
+  contents: read
 jobs:
   build:
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: macos-latest
+            rid: osx-arm64
+          - os: macos-15-intel
+            rid: osx-x64
+          - os: ubuntu-latest
+            rid: linux-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
       - run: dotnet restore src/NasMonitor.App/NasMonitor.App.csproj
       - run: dotnet build src/NasMonitor.App/NasMonitor.App.csproj --configuration Release --no-restore
+      - run: dotnet test tests/NasMonitor.App.Tests/NasMonitor.App.Tests.csproj --configuration Release --logger "trx;LogFileName=desktop-host.trx"
+      - name: Native Win32 primitives (explicitly skipped on other OSes)
+        run: dotnet test tests/NasMonitor.NativeTests/NasMonitor.NativeTests.csproj --configuration Release --logger "trx;LogFileName=native-host.trx"
+      - name: Native AppKit round trip (not desktop acceptance)
+        if: runner.os == 'macOS'
+        timeout-minutes: 2
+        run: dotnet run --project src/NasMonitor.App/NasMonitor.App.csproj --configuration Release --no-build -- --native-host-smoke artifacts/appkit-smoke.json
+      - name: Report test outcomes and native evidence
+        if: always()
+        shell: python
+        run: |
+          import runpy
+          runpy.run_path('.github/scripts/report-test-results.py', run_name='__main__')
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: test-results-${{ matrix.rid }}
+          path: |
+            tests/**/TestResults/*.trx
+            artifacts/appkit-smoke.json
+      - name: Publish unsigned development build
+        if: runner.os != 'Linux'
+        run: dotnet publish src/NasMonitor.App/NasMonitor.App.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output artifacts/publish/${{ matrix.rid }}
+      - name: Archive development build (preserve Unix permissions)
+        if: runner.os != 'Linux'
+        shell: bash
+        run: tar -czf artifacts/NasMonitor-${{ matrix.rid }}.tar.gz -C artifacts/publish/${{ matrix.rid }} .
+      - uses: actions/upload-artifact@v6
+        if: runner.os != 'Linux'
+        with:
+          name: NasMonitor-${{ matrix.rid }}-unsigned
+          path: artifacts/NasMonitor-${{ matrix.rid }}.tar.gz
+          if-no-files-found: error

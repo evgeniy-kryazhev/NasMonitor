@@ -46,16 +46,35 @@ public sealed class MainWindow : Window
                 _widget.Activate();
                 return;
             }
-            _widget = new WidgetWindow();
-            _widget.Show();
+            OpenWidget(false);
         };
         root.Children.Add(open);
         root.Children.Add(new TextBlock
         {
-            Text = "Windows desktop attachment is experimental. macOS desktop attachment is pending.",
+            Text = "Windows and macOS desktop hosts are experimental and require real OS verification.",
             Foreground = Brushes.Gray,
             TextWrapping = TextWrapping.Wrap
         });
         Content = root;
+    }
+
+    private void OpenWidget(bool attach, int recoveryAttempts = 0, Avalonia.PixelPoint? position = null)
+    {
+        var widget = new WidgetWindow();
+        _widget = widget;
+        if (position is { } initialPosition) widget.Position = initialPosition;
+        widget.RecreationRequested += (_, _) =>
+        {
+            // Explorer can destroy child HWNDs. Never reuse a dead native handle.
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (!IsVisible || !ReferenceEquals(_widget, widget)) return;
+                var savedPosition = widget.Position;
+                widget.Close();
+                OpenWidget(recoveryAttempts < 3, recoveryAttempts + 1, savedPosition);
+            });
+        };
+        if (attach) widget.Opened += (_, _) => widget.RequestAttachment();
+        widget.Show();
     }
 }
