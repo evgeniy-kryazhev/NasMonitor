@@ -40,6 +40,12 @@ jobs:
         if: runner.os == 'macOS'
         timeout-minutes: 2
         run: dotnet run --project src/NasMonitor.App/NasMonitor.App.csproj --configuration Release --no-build -- --native-host-smoke artifacts/appkit-smoke.json
+      - name: Report test outcomes and native evidence
+        if: always()
+        shell: python
+        run: |
+          import runpy
+          runpy.run_path('.github/scripts/report-test-results.py', run_name='__main__')
       - uses: actions/upload-artifact@v6
         if: always()
         with:
