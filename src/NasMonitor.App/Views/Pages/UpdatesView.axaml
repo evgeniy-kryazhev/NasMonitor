@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:viewModels="using:NasMonitor.App.ViewModels"
+             xmlns:local="using:NasMonitor.App.Localization"
+             x:Class="NasMonitor.App.Views.Pages.UpdatesView" x:DataType="viewModels:UpdatesViewModel">
+  <Grid Margin="28,28,0,0" RowDefinitions="Auto,*,Auto">
+    <StackPanel Margin="0,0,28,20" Spacing="12">
+      <TextBlock Text="{local:Text NavigationUpdates}" FontSize="28" FontWeight="SemiBold" />
+      <TextBlock Text="{local:Text UpdateHelp}" TextWrapping="Wrap" Opacity="0.65" />
+    </StackPanel>
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="0,0,28,28" Spacing="16">
+        <TextBlock Text="{local:Text UpdateCurrentVersion}" Opacity="0.65" />
+        <TextBlock Text="{Binding CurrentVersion}" FontSize="20" FontWeight="SemiBold" />
+        <CheckBox Content="{local:Text UpdateAutomaticChecks}" IsChecked="{Binding AutomaticChecks, Mode=TwoWay}" />
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontWeight="SemiBold" />
+        <ProgressBar Value="{Binding Progress}" Maximum="100" IsVisible="{Binding IsBusy}"
+                     IsIndeterminate="{Binding IsChecking}" Height="6" />
+        <TextBlock Text="{local:Text UpdateAvailableVersion}" Opacity="0.65" />
+        <TextBlock Text="{Binding AvailableVersion}" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding ReleaseNotes}" TextWrapping="Wrap" />
+        <TextBlock Text="{local:Text UpdatePortableRequired}" IsVisible="{Binding !IsPortable}"
+                   TextWrapping="Wrap" Opacity="0.65" />
+        <HyperlinkButton Content="{local:Text UpdateReleasePage}"
+                         NavigateUri="https://github.com/evgeniy-kryazhev/NasMonitor/releases" />
+      </StackPanel>
+    </ScrollViewer>
+    <WrapPanel Grid.Row="2" Margin="0,16,28,28">
+      <Button Content="{local:Text UpdateCheck}" Command="{Binding CheckCommand}" Margin="0,0,8,8" />
+      <Button Content="{local:Text UpdateInstall}" Command="{Binding InstallCommand}" Margin="0,0,8,8" />
+      <Button Content="{local:Text NasCancel}" Command="{Binding InstallCancelCommand}" Margin="0,0,0,8" />
+    </WrapPanel>
+  </Grid>
+</UserControl>

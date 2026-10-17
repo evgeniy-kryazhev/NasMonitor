@@ -162,7 +162,7 @@ internal sealed class SynologyMetricsSession(HttpClient client, DsmProtocol prot
                 ConnectionError.UnsupportedApi => MetricAvailability.Unsupported,
                 _ => MetricAvailability.Unavailable
             };
-            return new DsmMetricGroup(null, availability, collectedAt);
+            return new DsmMetricGroup(null, availability, collectedAt, failure.DsmCode);
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException
                                               or InvalidOperationException)

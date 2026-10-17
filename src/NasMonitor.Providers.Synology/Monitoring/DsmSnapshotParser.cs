@@ -92,7 +92,7 @@ internal static partial class DsmSnapshotParser
     {
         if (group.Availability != MetricAvailability.Available)
         {
-            return new NasMetric(null, group.CollectedAt, group.Availability);
+            return new NasMetric(null, group.CollectedAt, group.Availability) { DsmCode = group.DsmCode };
         }
 
         return NasMetric.Create(value, group.CollectedAt, minimum, maximum);

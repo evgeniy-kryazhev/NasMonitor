@@ -32,13 +32,17 @@ public class App : Application
             bool smokeMode = desktop.Args?.Contains("--smoke-test") == true;
             services = ApplicationServices.Create(smokeMode);
             WidgetWorkspace workspace = services.GetRequiredService<WidgetWorkspace>();
+            UpdatesViewModel updates = services.GetRequiredService<UpdatesViewModel>();
+            updates.RestartRequested += () => desktop.Shutdown();
             var manager = new ManagerWindow(workspace,
-                services.GetRequiredService<NasConnectionsViewModel>());
+                services.GetRequiredService<NasConnectionsViewModel>(),
+                updates);
             desktop.MainWindow = manager;
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             manager.Opened += async (_, _) =>
             {
                 await workspace.StartAsync(manager);
+                await updates.StartAsync();
                 int restoredWidgetCount = workspace.Widgets.Count;
                 if (smokeMode)
                 {
@@ -89,6 +93,7 @@ public class App : Application
             };
             desktop.Exit += (_, _) =>
             {
+                updates.Dispose();
                 workspace.Dispose();
                 services.GetRequiredService<WidgetMonitoringPresenter>().Dispose();
                 services.DisposeAsync().AsTask().GetAwaiter().GetResult();

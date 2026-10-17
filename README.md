@@ -114,6 +114,10 @@ Self-contained архивы создаются в `artifacts/`, код и скр
 
 ## Публикация одним файлом
 
+Обновления проверяются через GitHub Releases автоматически и вручную на отдельной
+странице. Установка — кнопкой «Обновить и перезапустить», с проверкой SHA-256
+и сохранением предыдущего executable. [Настройка релизов и ограничения](docs/AUTO-UPDATES.md).
+
 `./scripts/publish.ps1 -Runtime win-x64` создаёт **`artifacts/NasMonitor-win-x64.exe`** —
 один self-contained исполняемый файл, включая .NET runtime и native dependencies.
 Установка .NET и соседние DLL не требуются; runtime извлекает native libraries при

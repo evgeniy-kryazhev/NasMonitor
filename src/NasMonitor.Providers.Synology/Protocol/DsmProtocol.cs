@@ -13,7 +13,14 @@ internal sealed class DsmProtocol(HttpClient httpClient)
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, uri);
-        request.Content = new FormUrlEncodedContent(parameters);
+        if (parameters.TryGetValue("SynoToken", out string? synoToken) && !string.IsNullOrEmpty(synoToken))
+        {
+            // DSM checks CSRF before processing the form body. Keep tokens out of URLs
+            // and shared client defaults so each request uses only its own session token.
+            request.Headers.Add("X-SYNO-TOKEN", synoToken);
+        }
+
+        request.Content = new FormUrlEncodedContent(parameters.Where(parameter => parameter.Key != "SynoToken"));
         using HttpResponseMessage response = await httpClient.SendAsync(request,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken).ConfigureAwait(false);
@@ -62,11 +69,15 @@ internal sealed class DsmProtocol(HttpClient httpClient)
         return resolved;
     }
 
-    internal static Dictionary<string, string> AuthParameters(string method, string sessionName = "NASMonitor")
+    internal static Dictionary<string, string> AuthParameters(string method)
     {
+        // session selects a DSM application; arbitrary client labels can be denied at login.
+        // Use the documented general DSM login and target logout with the returned _sid.
         return new Dictionary<string, string>
         {
-            ["api"] = "SYNO.API.Auth", ["version"] = "6", ["method"] = method, ["session"] = sessionName
+            ["api"] = "SYNO.API.Auth",
+            ["version"] = "6",
+            ["method"] = method
         };
     }
 

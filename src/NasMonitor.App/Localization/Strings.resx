@@ -454,4 +454,28 @@
   <data name="WidgetCreated" xml:space="preserve"><value>Виджет создан. Выберите для него NAS.</value></data>
   <data name="WidgetDeleted" xml:space="preserve"><value>Виджет удалён. Профили NAS сохранены.</value></data>
   <data name="WidgetsLoadFailed" xml:space="preserve"><value>Не удалось загрузить список виджетов. Проверьте доступ к настройкам и перезапустите приложение.</value></data>
+  <data name="NavigationUpdates" xml:space="preserve"><value>Обновления</value></data>
+  <data name="UpdateReady" xml:space="preserve"><value>Проверка ещё не выполнялась.</value></data>
+  <data name="UpdateHelp" xml:space="preserve"><value>Стабильные версии из GitHub Releases. Проверка выполняется при запуске и каждые 6 часов. Установка закроет приложение, обновит его и откроет снова.</value></data>
+  <data name="UpdateCurrentVersion" xml:space="preserve"><value>Текущая версия</value></data>
+  <data name="UpdateAvailableVersion" xml:space="preserve"><value>Доступная версия</value></data>
+  <data name="UpdateAutomaticChecks" xml:space="preserve"><value>Проверять обновления автоматически</value></data>
+  <data name="UpdateChecking" xml:space="preserve"><value>Проверяем GitHub Releases…</value></data>
+  <data name="UpdateUpToDate" xml:space="preserve"><value>Установлена актуальная версия.</value></data>
+  <data name="UpdateAvailable" xml:space="preserve"><value>Доступна новая версия.</value></data>
+  <data name="UpdateNoReleases" xml:space="preserve"><value>Публичные релизы пока недоступны. Проверьте страницу GitHub.</value></data>
+  <data name="UpdateMissingAsset" xml:space="preserve"><value>В новом релизе нет проверяемого файла для вашей платформы.</value></data>
+  <data name="UpdateRateLimited" xml:space="preserve"><value>GitHub временно ограничил запросы. Повторите проверку позже.</value></data>
+  <data name="UpdateCheckFailed" xml:space="preserve"><value>Не удалось проверить обновления. Проверьте подключение и повторите попытку.</value></data>
+  <data name="UpdateDownloading" xml:space="preserve"><value>Загружаем обновление и проверяем SHA-256…</value></data>
+  <data name="UpdatePreparing" xml:space="preserve"><value>Подготавливаем обновление. Приложение перезапустится…</value></data>
+  <data name="UpdateInstallFailed" xml:space="preserve"><value>Обновление не установлено. Проверьте сеть, доступ записи в папку приложения и целостность релиза. Предыдущая версия сохранена.</value></data>
+  <data name="UpdateCancelled" xml:space="preserve"><value>Обновление отменено.</value></data>
+  <data name="UpdateInstalled" xml:space="preserve"><value>Обновление установлено.</value></data>
+  <data name="UpdateSmokeMode" xml:space="preserve"><value>Проверка GitHub отключена в тестовом режиме.</value></data>
+  <data name="UpdateUnsupported" xml:space="preserve"><value>Для этой платформы автообновление недоступно.</value></data>
+  <data name="UpdatePortableRequired" xml:space="preserve"><value>Установка доступна для опубликованного однофайлового приложения в доступной для записи папке. Для подписанного macOS bundle используйте страницу релиза.</value></data>
+  <data name="UpdateReleasePage" xml:space="preserve"><value>Открыть GitHub Releases</value></data>
+  <data name="UpdateCheck" xml:space="preserve"><value>Проверить обновления</value></data>
+  <data name="UpdateInstall" xml:space="preserve"><value>Обновить и перезапустить</value></data>
 </root>

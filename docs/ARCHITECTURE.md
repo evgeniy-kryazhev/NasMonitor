@@ -35,6 +35,12 @@ macOS desktop-приёмка отложена, её статус Unverified.
 
 ## Реализованный срез подключения DSM
 
+Обновления из GitHub Releases изолированы в Core/Updates и Infrastructure/Updates;
+UpdatesViewModel управляет проверкой, загрузкой и передачей управления helper.
+HTTP обновлений не использует DSM transport или credentials. Helper работает
+до Avalonia bootstrap и заменяет только portable executable после завершения
+основного процесса. Формат release assets и проверки: `AUTO-UPDATES.md`.
+
 Core содержит NasProfile, контролируемые результаты проверки, INasConnectionTester
 и ISecretStore. Providers.Synology использует typed HttpClient через HttpClientFactory,
 IDsmTransportProbe, discovery, Auth v6 login/logout и объявленные API. Одна проверка
@@ -61,7 +67,8 @@ Core определяет NasMetric, NasSnapshot, NasVolume, NasMonitorState и 
 сессии. Providers.Synology содержит общий DsmProtocol и MetricsSessionFactory:
 API discovery, вход, чтение Utilization/System/Storage и ограниченный по времени
 logout. Пароль/OTP передаются только при входе; SessionId/SynoToken живут внутри
-provider и не попадают в snapshot. Проба использует отдельное имя сессии.
+provider и не попадают в snapshot. Проба выполняет отдельный вход. Оба пути
+не задают необязательное имя приложения session; logout адресуется полученным SID.
 
 Infrastructure/NasMonitoringCoordinator владеет одним sequential loop на ID NAS,
 общим immutable-кэшем, глобальным лимитом трёх одновременных циклов запросов,

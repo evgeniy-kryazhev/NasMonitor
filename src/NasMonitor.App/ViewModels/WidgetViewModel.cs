@@ -241,6 +241,11 @@ public partial class WidgetViewModel : ObservableObject
         UpdateTitle();
         MonitorStatus = UiText.Get(state is null ? "MonitorNoSource" : "Monitor" + state.Status);
         MonitorDetail = state?.Error is { } error && error != ConnectionError.None ? UiText.Get("Error" + error) : "";
+        if (state?.DsmCode is int dsmCode)
+        {
+            MonitorDetail += " (DSM " + dsmCode.ToString(CultureInfo.InvariantCulture) + ")";
+        }
+
         if (state?.Status == NasMonitorStatus.Degraded && string.IsNullOrEmpty(MonitorDetail))
         {
             MonitorDetail = UiText.Get("MonitorPartialHelp");
@@ -272,6 +277,13 @@ public partial class WidgetViewModel : ObservableObject
         UploadDetail = MetricDetail(snapshot?.UploadBytesPerSecond, now, stale, 35);
         TemperatureDetail = MetricDetail(snapshot?.TemperatureCelsius, now, stale, 95);
         UptimeDetail = MetricDetail(snapshot?.UptimeSeconds, now, stale, 95);
+        if (state?.Status == NasMonitorStatus.Degraded &&
+            snapshot?.Storage is { Availability: not MetricAvailability.Available })
+        {
+            // Keep the storage failure visible in settings even when tooltips cannot be opened.
+            MonitorDetail = UiText.Get("StorageLabel") + ": " + StorageDetail;
+        }
+
         DeviceDescription = string.Join(" · ",
             new[] { snapshot?.Model, snapshot?.DsmVersion }.Where(text => !string.IsNullOrWhiteSpace(text)));
         LastUpdate = state?.LastSuccessAt is { } lastSuccess
@@ -305,7 +317,13 @@ public partial class WidgetViewModel : ObservableObject
             availability = MetricAvailability.Stale;
         }
 
-        return UiText.Get("Metric" + availability);
+        string detail = UiText.Get("Metric" + availability);
+        if (metric?.DsmCode is int dsmCode)
+        {
+            detail += " (DSM " + dsmCode.ToString(CultureInfo.InvariantCulture) + ")";
+        }
+
+        return detail;
     }
 
     private static string Percent(double? value)

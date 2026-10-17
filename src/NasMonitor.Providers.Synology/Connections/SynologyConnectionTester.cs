@@ -82,7 +82,7 @@ public sealed partial class SynologyConnectionTester(HttpClient httpClient, IDsm
             Report(new ConnectionCheck(stage, CheckState.Passed));
 
             stage = ConnectionStage.Authentication;
-            Dictionary<string, string> login = AuthParameters("login", "NASMonitorProbe");
+            Dictionary<string, string> login = AuthParameters("login");
             login["account"] = profile.Username;
             login["passwd"] = password;
             login["format"] = "sid";
@@ -178,7 +178,7 @@ public sealed partial class SynologyConnectionTester(HttpClient httpClient, IDsm
                 using var logoutTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 try
                 {
-                    Dictionary<string, string> logout = AuthParameters("logout", "NASMonitorProbe");
+                    Dictionary<string, string> logout = AuthParameters("logout");
                     AddSession(logout, sessionId, synoToken);
                     using JsonDocument response = await protocol
                         .SendAsync(authenticationUri, logout, logoutTimeout.Token).ConfigureAwait(false);

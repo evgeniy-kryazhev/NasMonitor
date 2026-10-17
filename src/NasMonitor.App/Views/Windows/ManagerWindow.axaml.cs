@@ -16,6 +16,7 @@ public partial class ManagerWindow : Window
 {
     private readonly NasConnectionsView connections = new();
     private readonly NasConnectionsViewModel? connectionsViewModel;
+    private readonly UpdatesView updatesView = new();
     private readonly WidgetSettingsView widgetSettings = new();
     private readonly WidgetWorkspace? workspace;
     private WidgetInstance? editedWidget;
@@ -29,10 +30,13 @@ public partial class ManagerWindow : Window
 
     /// <summary>Supply the independent page view models and widget controller.</summary>
     public ManagerWindow(WidgetWorkspace workspace,
-        NasConnectionsViewModel connectionsViewModel) : this()
+        NasConnectionsViewModel connectionsViewModel,
+        UpdatesViewModel updates) : this()
     {
         this.connectionsViewModel = connectionsViewModel;
         this.workspace = workspace;
+        updatesView.DataContext = updates;
+        UpdatesNavigation.DataContext = updates;
         widgetSettings.InitializeWorkspace(workspace);
         workspace.SelectionChanged += SelectWidget;
         Closed += (_, _) => workspace.SelectionChanged -= SelectWidget;
@@ -136,7 +140,7 @@ public partial class ManagerWindow : Window
         else
         {
             connectionsViewModel?.LeavePage();
-            PageHost.Content = widgetSettings;
+            PageHost.Content = navigation.SelectedIndex == 2 ? updatesView : widgetSettings;
         }
     }
 

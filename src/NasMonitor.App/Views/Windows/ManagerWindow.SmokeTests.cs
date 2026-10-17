@@ -33,7 +33,7 @@ public partial class ManagerWindow
         foreach (ThemeVariant theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
             ThemeSelector.SelectedIndex = theme == ThemeVariant.Light ? 1 : 2;
-            foreach (int page in new[] { 0, 1 })
+            foreach (int page in new[] { 0, 1, 2 })
             {
                 Navigation.SelectedIndex = page;
                 // Allow theme, bindings and layout to settle before rendering our own visual tree.
@@ -46,7 +46,7 @@ public partial class ManagerWindow
                     }
                 }
 
-                string pageName = page == 0 ? "widget" : "connections";
+                string pageName = page switch { 0 => "widget", 1 => "connections", _ => "updates" };
                 SaveSmokeImage($"artifacts/ui/{pageName}-{theme.Key}.png");
             }
         }

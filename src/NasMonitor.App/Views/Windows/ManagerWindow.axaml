@@ -20,6 +20,8 @@
                      AutomationProperties.Name="{local:Text NavigationLabel}">
               <ListBoxItem Padding="14,12" Content="{local:Text NavigationWidget}" />
               <ListBoxItem Padding="14,12" Content="{local:Text NavigationConnections}" />
+              <ListBoxItem x:Name="UpdatesNavigation" Padding="14,12" x:DataType="viewModels:UpdatesViewModel"
+                           Content="{Binding NavigationLabel}" />
             </ListBox>
             <StackPanel Spacing="8">
               <TextBlock Text="{local:Text SidebarNasTitle}" Margin="14,0" FontSize="12" FontWeight="SemiBold" Opacity="0.65" />

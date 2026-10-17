@@ -1,5 +1,102 @@
 # Подключение DSM, Semi.Avalonia и кастомизация — 2026-10-17
 
+## Диагностика хранилища при работающих остальных метриках
+
+Пользовательским скриншотом подтверждены реальные CPU/RAM/сеть/температура/uptime
+после исправления CSRF (Manually-tested пользователем на его NAS). Хранилище
+остаётся «—», статус частичный. Со слов владельца есть один том; это не
+доказательство причины отказа. Пользователь сообщил, что tooltip не отображается.
+
+Числовой DSM-код частичного отказа теперь проходит через DsmMetricGroup и
+NasMetric в текст метрики. При недоступном хранилище в состоянии Degraded
+существующая видимая строка под «Обновить метрики» показывает StorageDetail
+с кодом, если DSM его вернул. Сырые ответы/секреты не показываются. Не добавляли
+новых storage API, не меняли права, формулы и интервалы опроса.
+
+Implemented / Automated-tested: один том без storagePools даёт 25% для прямого
+и вложенного data; код 105 сохраняется только у запрещённого storage;
+ViewModel показывает причину и код в MonitorDetail без необходимости tooltip.
+Release build: 0 ошибок/предупреждений; полный suite: 105/105 (23 Core +
+82 Connection). Windows пакет пересобран командой publish ниже.
+
+Изменены NasMetric.cs, DsmMetricGroup.cs, SynologyMetricsSession.cs,
+DsmSnapshotParser.cs, WidgetViewModel.cs, DsmMetricsTests.cs,
+MonitoringTests.cs; документация DECISIONS, DSM-MONITORING,
+DSM-CONNECTION-TESTING и этот отчёт.
+
+Команды: `dotnet build NasMonitor.slnx -c Release`,
+`dotnet test NasMonitor.slnx -c Release --no-build`,
+`./scripts/publish.ps1 -Runtime win-x64`.
+Причина storage на реальном NAS и GUI новой диагностики — Unverified.
+Для продолжения нужно получить видимую строку после запуска нового EXE.
+macOS пакеты в этом срезе не пересобирались, сохраняют предыдущую CSRF-версию.
+
+## Исправление CSRF при чтении метрик
+
+Пользователь подтвердил успешную авторизацию после удаления произвольного
+session (Manually-tested пользователем для его NAS). Затем на странице виджета
+показана ошибка «Сессия истекла или была прервана», без доступных показателей.
+Это отдельный сбой после входа; успешность чтения метрик не подтверждена.
+
+В DsmProtocol токен SynoToken передавался только в POST body. Теперь он исключён
+из формы и отправляется как X-SYNO-TOKEN в заголовке отдельного запроса по
+документации Synology. SID/пароль/OTP остаются в POST body; URL и общие
+DefaultRequestHeaders не содержат токен. Не включаем общие cookies и не
+отключаем CSRF. Discovery после входа, метрики и logout используют этот транспорт.
+WidgetViewModel показывает точный DSM-код рядом с контролируемой ошибкой сессии.
+
+Implemented / Automated-tested: тест CSRF-защищённого сервера выдавал 119
+на прежнем запросе, после исправления читает CPU/тома/температуру и закрывает
+сессию с заголовком. Проверены отсутствие токена в URL/форме, отсутствие
+заголовка до входа и отсутствие переноса токена при повторном входе тем же
+HttpClient. Проверен показ DSM 119 в UI ViewModel.
+
+`dotnet build NasMonitor.slnx -c Release`: 0 ошибок и предупреждений.
+`dotnet test NasMonitor.slnx -c Release --no-build`: 103/103 (23 Core + 80 Connection).
+`./scripts/publish.ps1 -Runtime all`: успешно пересобраны Windows x64 и
+macOS arm64/x64 executables, ZIP и SHA256SUMS.txt. GUI этих пакетов в рамках
+CSRF-исправления не запускался; Windows ViewModel проверена unit-тестом.
+Реальный результат CSRF-исправления и доступ к метрикам с делегированной ролью
+остаются Unverified. Блокер подтверждения — повторное подключение пользователя;
+новых сетевых обращений к реальному NAS из среды разработки не выполнялось.
+
+В этом исправлении изменены DsmProtocol.cs, WidgetViewModel.cs,
+DsmConnectionTests.cs, DsmMetricsTests.cs, MonitoringTests.cs и документация
+DECISIONS, SECURITY, DSM-CONNECTION-TESTING, этот отчёт.
+
+## Исправление запроса авторизации при DSM 402
+
+Пользователь воспроизвёл DSM 402 на стадии авторизации при разрешённом приложении
+DSM; дополнительно показана делегированная роль «Мониторинг системы». В запросах
+обнаружены произвольные имена приложений session: NASMonitorProbe и NASMonitor.
+Их удалили из общего AuthParameters и обоих вызовов probe. Теперь login не задаёт
+необязательное имя приложения, logout использует полученный `_sid` и SynoToken.
+Это вероятная причина наблюдаемого отказа, а не подтверждённый результат на NAS.
+
+Implemented / Automated-tested: два регрессионных сценария сначала падали на
+прежних запросах, после исправления все 35 DSM connection/metrics тестов прошли.
+Release build: 0 ошибок и предупреждений. Полный suite: 100/100 (23 Core +
+77 Connection). Результаты основаны на синтетических HTTP-ответах; реальный NAS
+из этой среды не опрашивался. Исправление 402, независимость серверных сессий,
+права делегированной роли на каждую метрику и macOS runtime — Unverified.
+Блокер окончательного подтверждения — повторный запуск пользователем.
+
+Изменены: Providers.Synology/Protocol/DsmProtocol.cs,
+Providers.Synology/Connections/SynologyConnectionTester.cs,
+Connection.Tests/Connections/DsmConnectionTests.cs,
+Connection.Tests/Monitoring/DsmMetricsTests.cs; документация DECISIONS,
+ARCHITECTURE, DSM-MONITORING, DSM-CONNECTION-TESTING и этот отчёт.
+
+Команды: `dotnet build NasMonitor.slnx -c Release`,
+`dotnet test NasMonitor.slnx -c Release --no-build`,
+`./scripts/publish.ps1 -Runtime all`.
+Публикация всех трёх RID завершилась успешно: обновлены EXE Windows,
+macOS arm64/x64 executables и ZIP, SHA256SUMS.txt. Первые sandbox-запуски
+не завершили восстановление RID-зависимостей; повторная публикация с разрешённым
+восстановлением NuGet прошла. Новые пакеты в GUI в рамках этого исправления
+не запускались; готовность пакетов не подтверждает подключение к реальному NAS.
+Повторная ручная проверка: раздел DSM 402 в DSM-CONNECTION-TESTING.md.
+
 Актуальный этап реальных метрик: [DSM-MONITORING.md](DSM-MONITORING.md).
 Указания ниже о DEMO/отсутствии poller относятся к историческому срезу подключения.
 

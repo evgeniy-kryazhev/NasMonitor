@@ -40,14 +40,45 @@ public sealed class DsmConnectionTests
         Assert.AreEqual("test &+пароль", handler.Requests[1].Form["passwd"]);
         Assert.AreEqual("123456", handler.Requests[1].Form["otp_code"]);
         Assert.AreEqual("6", handler.Requests[1].Form["version"]);
-        Assert.AreEqual("synthetic-csrf", handler.Requests[2].Form["SynoToken"]);
+        Assert.IsFalse(handler.Requests[1].Form.ContainsKey("session"),
+            "Login must not request an unregistered DSM application session.");
+        Assert.AreEqual("synthetic-csrf", handler.Requests[2].SynoToken);
+        Assert.AreEqual("synthetic-csrf", handler.Requests[3].SynoToken);
+        Assert.IsNull(handler.Requests[0].SynoToken);
+        Assert.IsNull(handler.Requests[1].SynoToken);
+        Assert.IsTrue(handler.Requests.All(request => !request.Form.ContainsKey("SynoToken")));
         Assert.AreEqual("synthetic-session", handler.Requests[3].Form["_sid"]);
         Assert.AreEqual("logout", handler.Requests[3].Form["method"]);
+        Assert.IsFalse(handler.Requests[3].Form.ContainsKey("session"),
+            "Logout must target only the returned SID.");
         Assert.AreEqual(CheckState.Unverified,
             result.Checks.Single(check => check.Stage == ConnectionStage.Permissions).State);
         string resultJson = JsonSerializer.Serialize(result);
         Assert.IsFalse(resultJson.Contains("synthetic-session", StringComparison.Ordinal));
         Assert.IsFalse(resultJson.Contains("synthetic-csrf", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task ReusedHttpClientDoesNotSendPreviousSessionTokenWhenNextLoginHasNone()
+    {
+        const string loginWithoutToken = """{"success":true,"data":{"sid":"second-session"}}""";
+        using var handler = new ScriptedHandler(
+        [
+            Discovery, Login, Capabilities, """{"success":true}""",
+            Discovery, loginWithoutToken, Capabilities, """{"success":true}"""
+        ]);
+        using var client = new HttpClient(handler);
+        var tester = new SynologyConnectionTester(client, new SuccessfulTransport());
+
+        NasConnectionResult first = await tester.TestAsync(Profile, "first-password", null, null, CancellationToken.None);
+        NasConnectionResult second = await tester.TestAsync(Profile, "second-password", null, null, CancellationToken.None);
+
+        Assert.IsTrue(first.Authenticated);
+        Assert.IsTrue(second.Authenticated);
+        Assert.AreEqual("synthetic-csrf", handler.Requests[3].SynoToken);
+        Assert.IsTrue(handler.Requests.Skip(4).All(request => request.SynoToken is null));
+        Assert.AreEqual("second-session", handler.Requests[7].Form["_sid"]);
+        Assert.IsFalse(client.DefaultRequestHeaders.Contains("X-SYNO-TOKEN"));
     }
 
     [DataTestMethod]
@@ -277,7 +308,7 @@ public sealed class DsmConnectionTests
         }
     }
 
-    private sealed record CapturedRequest(HttpMethod Method, Uri Uri, Dictionary<string, string> Form);
+    private sealed record CapturedRequest(HttpMethod Method, Uri Uri, Dictionary<string, string> Form, string? SynoToken);
 
     private sealed class ScriptedHandler(string[] responses) : HttpMessageHandler
     {
@@ -306,7 +337,10 @@ public sealed class DsmConnectionTests
             var form = body.Split('&').Select(parameter => parameter.Split('=', 2))
                 .ToDictionary(parts => WebUtility.UrlDecode(parts[0]), parts => WebUtility.UrlDecode(parts[1]));
             int index = Requests.Count;
-            Requests.Add(new CapturedRequest(request.Method, request.RequestUri!, form));
+            string? synoToken = request.Headers.TryGetValues("X-SYNO-TOKEN", out IEnumerable<string>? tokens)
+                ? tokens.Single()
+                : null;
+            Requests.Add(new CapturedRequest(request.Method, request.RequestUri!, form, synoToken));
             BeforeResponse?.Invoke(index);
             return new HttpResponseMessage(ResponseStatus) { Content = new StringContent(responses[index]) };
         }

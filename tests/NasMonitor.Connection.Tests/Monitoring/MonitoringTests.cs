@@ -15,6 +15,21 @@ namespace NasMonitor.Connection.Tests.Monitoring;
 public sealed class MonitoringTests
 {
     [TestMethod]
+    public void SessionFailureDisplaysDsmCodeWithoutSessionCredentials()
+    {
+        var display = new WidgetViewModel();
+        var state = new NasMonitorState(Guid.NewGuid(),
+            NasMonitorStatus.AuthenticationRequired,
+            Error: ConnectionError.SessionExpired,
+            DsmCode: 119);
+
+        display.ApplyMonitoringState(state, DateTimeOffset.UtcNow);
+
+        StringAssert.Contains(display.MonitorDetail, "DSM 119");
+        Assert.AreEqual("—", display.CpuText);
+    }
+
+    [TestMethod]
     public async Task SynchronizingUnchangedProfilesDoesNotCreateAnotherPoller()
     {
         await using var fixture = new MonitorFixture();
@@ -233,7 +248,7 @@ public sealed class MonitoringTests
         NasSnapshot snapshot = Sample(Guid.NewGuid(), 0) with
         {
             Ram = NasMetric.Create(null, now),
-            Storage = new NasMetric(null, now, MetricAvailability.PermissionDenied),
+            Storage = new NasMetric(null, now, MetricAvailability.PermissionDenied) { DsmCode = 105 },
             TemperatureCelsius = NasMetric.Create(39, now.AddMinutes(-5), -50, 150),
             DownloadBytesPerSecond = NasMetric.Create(2400000, now, maximum: double.MaxValue)
         };
@@ -247,6 +262,10 @@ public sealed class MonitoringTests
         Assert.AreEqual("—", display.StorageText);
         Assert.AreEqual("—", display.TemperatureText);
         Assert.IsTrue(display.StorageDetail.Contains("прав", StringComparison.Ordinal));
+        StringAssert.Contains(display.StorageDetail, "DSM 105");
+        StringAssert.Contains(display.MonitorDetail, "Хранилище");
+        StringAssert.Contains(display.MonitorDetail, "DSM 105");
+        Assert.IsTrue(display.HasMonitorDetail);
         Assert.IsTrue(display.TemperatureDetail.Contains("устарели", StringComparison.Ordinal));
         Assert.IsTrue(display.DownloadText.EndsWith(" MB/s", StringComparison.Ordinal));
         display.ApplyMonitoringState(state, now.AddSeconds(40));

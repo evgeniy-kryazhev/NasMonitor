@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using NasMonitor.App.Persistence;
 using NasMonitor.App.Services;
@@ -5,11 +6,13 @@ using NasMonitor.App.ViewModels;
 using NasMonitor.Core.Connections;
 using NasMonitor.Core.Monitoring;
 using NasMonitor.Core.Security;
+using NasMonitor.Core.Updates;
 using NasMonitor.Hosting.Abstractions;
 using NasMonitor.Hosting.Models;
 using NasMonitor.Infrastructure.Monitoring;
 using NasMonitor.Infrastructure.Persistence;
 using NasMonitor.Infrastructure.Profiles;
+using NasMonitor.Infrastructure.Updates;
 using NasMonitor.Platform.MacOS.Desktop;
 using NasMonitor.Platform.MacOS.Security;
 using NasMonitor.Platform.Windows.Desktop;
@@ -60,6 +63,46 @@ internal static class ApplicationServices
         {
             AllowAutoRedirect = false, UseCookies = false
         }).RemoveAllLoggers();
+        string updateDirectory = smokeMode
+            ? Path.GetFullPath("artifacts/smoke-updates")
+            : Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "NasMonitor",
+                "Updates");
+        registrations.AddSingleton(new UpdatePreferencesStore(updateDirectory));
+        registrations.AddHttpClient("GitHubUpdates", client => client.Timeout = TimeSpan.FromMinutes(10))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+                ConnectTimeout = TimeSpan.FromSeconds(15),
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 5
+            }).RemoveAllLoggers();
+        registrations.AddSingleton<IReleaseUpdateClient>(provider => new GitHubReleaseClient(
+            provider.GetRequiredService<IHttpClientFactory>().CreateClient("GitHubUpdates"),
+            "evgeniy-kryazhev",
+            "NasMonitor",
+            updateDirectory));
+        registrations.AddSingleton<IAppUpdateInstaller>(_ => new PortableUpdateInstaller(
+            Environment.ProcessPath ?? "",
+            updateDirectory));
+        string? assetName = OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64
+            ? "NasMonitor-win-x64.exe"
+            : OperatingSystem.IsMacOS()
+                ? RuntimeInformation.ProcessArchitecture switch
+                {
+                    Architecture.Arm64 => "NasMonitor-osx-arm64",
+                    Architecture.X64 => "NasMonitor-osx-x64",
+                    _ => null
+                }
+                : null;
+        registrations.AddSingleton(provider => new UpdatesViewModel(
+            provider.GetRequiredService<IReleaseUpdateClient>(),
+            provider.GetRequiredService<IAppUpdateInstaller>(),
+            provider.GetRequiredService<UpdatePreferencesStore>(),
+            typeof(App).Assembly.GetName().Version ?? new Version(0, 1, 0),
+            assetName,
+            !smokeMode));
         registrations.AddTransient<NasConnectionsViewModel>();
         registrations.AddSingleton<IDesktopWidgetHost>(_ => OperatingSystem.IsWindows()
             ? new WindowsDesktopHost()

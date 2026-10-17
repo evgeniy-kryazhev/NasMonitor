@@ -39,6 +39,50 @@ public sealed class DsmMetricsTests
         new(Guid.NewGuid(), "Fixture NAS", new Uri("https://nas.example:5001"), "fixture");
 
     [TestMethod]
+    public async Task MonitoringLoginOmitsApplicationSessionAndLogoutTargetsReturnedSid()
+    {
+        using var handler = new DsmHandler();
+        var factory = new SynologyMetricsSessionFactory(() => new HttpClient(handler, false));
+
+        await using (INasMetricsSession session =
+                     await factory.ConnectAsync(Profile, "fixture-password", null, CancellationToken.None))
+        {
+            CapturedRequest login = handler.Requests.Single(request => request.Form["method"] == "login");
+            Assert.IsFalse(login.Form.ContainsKey("session"),
+                "Login must not request an unregistered DSM application session.");
+        }
+
+        CapturedRequest logout = handler.Requests.Single(request => request.Form["method"] == "logout");
+        Assert.IsFalse(logout.Form.ContainsKey("session"), "Logout must target only the returned SID.");
+        Assert.AreEqual("fixture-sid", logout.Form["_sid"]);
+        Assert.AreEqual("fixture-token", logout.SynoToken);
+        Assert.IsFalse(logout.Form.ContainsKey("SynoToken"));
+    }
+
+    [TestMethod]
+    public async Task CsrfProtectedMetricsAcceptTokenHeaderWithoutCredentialsInUrl()
+    {
+        using var handler = new DsmHandler { RequireCsrfHeader = true };
+        var factory = new SynologyMetricsSessionFactory(() => new HttpClient(handler, false));
+
+        await using (INasMetricsSession session =
+                     await factory.ConnectAsync(Profile, "fixture-password", null, CancellationToken.None))
+        {
+            NasSnapshot snapshot = await session.ReadAsync(CancellationToken.None);
+            Assert.AreEqual(12.0, snapshot.Cpu.Value);
+            Assert.AreEqual(64.0, snapshot.Storage!.Value);
+            Assert.AreEqual(39.0, snapshot.TemperatureCelsius!.Value);
+        }
+
+        Assert.IsTrue(handler.Requests.All(request => request.Uri.Query == ""));
+        Assert.IsTrue(handler.Requests.All(request => !request.Form.ContainsKey("SynoToken")));
+        Assert.IsTrue(handler.Requests.Where(request => request.Form.ContainsKey("_sid"))
+            .All(request => request.SynoToken == "fixture-token"));
+        Assert.IsTrue(handler.Requests.Where(request => !request.Form.ContainsKey("_sid"))
+            .All(request => request.SynoToken is null));
+    }
+
+    [TestMethod]
     public async Task ManualRefreshRequeriesSystemAndStorageWithoutAnotherLogin()
     {
         using var handler = new DsmHandler();
@@ -152,6 +196,29 @@ public sealed class DsmMetricsTests
         Assert.AreEqual(39.0, snapshot.TemperatureCelsius!.Value);
         Assert.IsNull(snapshot.Storage!.Value);
         Assert.AreEqual(MetricAvailability.PermissionDenied, snapshot.Storage.Availability);
+        Assert.AreEqual(105, snapshot.Storage.DsmCode);
+        Assert.IsNull(snapshot.Cpu.DsmCode);
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task SingleVolumeWithoutStoragePoolReportsItsUsedPercentage(bool nestedData)
+    {
+        const string volumeData = """{"volumes":[{"id":"volume1","size":{"used":"250","total":"1000"}}]}""";
+        string storageData = nestedData ? "{\"data\":" + volumeData + "}" : volumeData;
+        using var handler = new DsmHandler { StorageResponse = "{\"success\":true,\"data\":" + storageData + "}" };
+        var factory = new SynologyMetricsSessionFactory(() => new HttpClient(handler, false));
+        await using INasMetricsSession session =
+            await factory.ConnectAsync(Profile, "fixture-password", null, CancellationToken.None);
+
+        NasSnapshot snapshot = await session.ReadAsync(CancellationToken.None);
+
+        Assert.AreEqual(MetricAvailability.Available, snapshot.Storage!.Availability);
+        Assert.AreEqual(25.0, snapshot.Storage.Value);
+        Assert.AreEqual(1, snapshot.Volumes!.Count);
+        Assert.AreEqual(250.0, snapshot.Volumes[0].UsedBytes);
+        Assert.AreEqual(1000.0, snapshot.Volumes[0].TotalBytes);
     }
 
     [TestMethod]
@@ -240,10 +307,12 @@ public sealed class DsmMetricsTests
         Assert.IsTrue(handler.Requests.All(request => request.Uri.Host == "nas.example"));
     }
 
-    private sealed record CapturedRequest(HttpMethod Method, Uri Uri, Dictionary<string, string> Form);
+    private sealed record CapturedRequest(HttpMethod Method, Uri Uri, Dictionary<string, string> Form, string? SynoToken);
 
     private sealed class DsmHandler : HttpMessageHandler
     {
+        internal bool RequireCsrfHeader { get; init; }
+
         internal List<CapturedRequest> Requests
         {
             get;
@@ -279,7 +348,18 @@ public sealed class DsmMetricsTests
             string body = await request.Content!.ReadAsStringAsync(cancellationToken);
             var form = body.Split('&').Select(parameter => parameter.Split('=', 2))
                 .ToDictionary(parts => WebUtility.UrlDecode(parts[0]), parts => WebUtility.UrlDecode(parts[1]));
-            Requests.Add(new CapturedRequest(request.Method, request.RequestUri!, form));
+            string? synoToken = request.Headers.TryGetValues("X-SYNO-TOKEN", out IEnumerable<string>? tokens)
+                ? tokens.Single()
+                : null;
+            Requests.Add(new CapturedRequest(request.Method, request.RequestUri!, form, synoToken));
+            if (RequireCsrfHeader && form.ContainsKey("_sid") && synoToken != "fixture-token")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""{"success":false,"error":{"code":119}}""")
+                };
+            }
+
             string response = form["method"] switch
             {
                 "query" => form["query"] == "SYNO.API.Auth" ? AuthDiscovery : MetricsDiscovery,

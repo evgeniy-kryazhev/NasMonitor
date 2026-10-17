@@ -14,7 +14,9 @@
 
 - Авторизация только через HTTPS origin, без credentials/query/subpath в URL.
 - HttpClientFactory: cookies и automatic redirects отключены, HTTP logging удалён.
-- Пароль, OTP, SID и CSRF передаются в POST body; нет логирования ответов/исключений.
+- Пароль, OTP и SID передаются в POST body; CSRF — в заголовке X-SYNO-TOKEN
+  конкретного запроса, без DefaultRequestHeaders. URL не содержит секретов;
+  нет логирования запросов/заголовков/ответов/исключений.
 - Discovery path ограничен относительным /webapi/ внутри того же origin.
 - Пароль опционально хранится OS-secret-store под случайным UUID. При смене
   endpoint/username старый пароль не используется для новой идентичности.
