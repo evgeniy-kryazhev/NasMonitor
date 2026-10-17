@@ -150,7 +150,12 @@ internal sealed class Win32DesktopApi : IWindowsDesktopApi
         SetStyle(window, -16, style);
         SetStyle(window, -20, original.ExtendedStyle);
         if (!isChild)
-            SetStyle(window, -8, IsWindow(original.Owner) ? original.Owner.ToInt64() : 0); // GWLP_HWNDPARENT: owner
+        {
+            var owner = IsWindow(original.Owner) ? original.Owner : IntPtr.Zero;
+            // SetParent(..., NULL) normally already removes ownership. In particular, do not
+            // ask SetWindowLongPtr to resolve a NULL owner when no owner change is needed.
+            if (GetWindow(window, 4) != owner) SetStyle(window, -8, owner.ToInt64()); // GWLP_HWNDPARENT
+        }
         Place(window, parent, original.Bounds);
     }
     private static void Place(IntPtr window, IntPtr parent, WindowRect rect)
@@ -187,7 +192,8 @@ internal sealed class Win32DesktopApi : IWindowsDesktopApi
         ClearNativeError(0);
         var previous = IntPtr.Size == 8 ? SetWindowLongPtr(window, index, new IntPtr(value)) : new IntPtr(SetWindowLong(window, index, unchecked((int)value)));
         var error = Marshal.GetLastPInvokeError();
-        if (previous == IntPtr.Zero && error != 0) throw new Win32Exception(error);
+        if (previous == IntPtr.Zero && error != 0)
+            throw new Win32Exception(error, $"SetWindowLongPtr(index={index}, value={value}) failed (Win32 {error}).");
     }
     [DllImport("kernel32.dll", EntryPoint = "SetLastError")] private static extern void ClearNativeError(uint error);
     private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr data);
