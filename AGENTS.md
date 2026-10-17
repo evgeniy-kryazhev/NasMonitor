@@ -6,7 +6,7 @@
 - Separate Avalonia presentation from platform-specific desktop hosting.
 - For Windows, WorkerW/Progman integration is experimental and undocumented; handle Explorer restarts and preserve rollback paths.
 - For macOS, investigate AppKit/NSWindow and Spaces; do not confuse lowering a window with true desktop attachment.
-- Multi-NAS support, Synology DSM provider, secure credential storage and monitoring follow after the desktop spike.
+- Develop multi-NAS support, the Synology DSM provider, secure credential storage and monitoring in parallel with the desktop spike, per the current product direction. Native desktop acceptance remains a separate, explicitly unverified milestone.
 - Never store DSM passwords, API tokens or session identifiers in plaintext settings or logs.
 - Use strict TLS validation by default; non-admin access should be evaluated before requiring admin privileges.
 - Implement cancellation, timeouts, retry backoff and accurate stale/offline status.

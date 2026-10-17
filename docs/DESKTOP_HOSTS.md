@@ -1,12 +1,12 @@
 # Desktop host experiment and acceptance
 
-## Evidence and gate
+## Evidence and current status
 
 Both native hosts are **experimental and not accepted**. Development checks in Linux validate compilation, lifecycle logic using fake native APIs, and shared UI through Avalonia Headless. They do not validate native P/Invoke, actual placement, focus, DPI, Spaces, Explorer/Finder lifecycle, or desktop interaction. No Windows or macOS interactive desktop has been tested for this change. Local Release build and 14 tests passed (12 lifecycle tests and 2 headless UI tests, none skipped). Framework-dependent cross-publish for win-x64, osx-arm64 and osx-x64 also passed on Linux; this checks packaging, not execution on the target OS.
 
 At the initial spike commit `f1e7dc3`, GitHub Actions push run [39013797379](https://github.com/evgeniy-kryazhev/NasMonitor/actions/runs/39013797379) and PR #1 run [39013811485](https://github.com/evgeniy-kryazhev/NasMonitor/actions/runs/39013811485) reported Success. The original Linux build also passed, with NU1903 for Tmds.DBus.Protocol 0.21.2. Updating Avalonia packages together to 11.3.22 removed that warning; NuGet audit found no known vulnerable packages at validation time. Hosted runner builds are not desktop acceptance.
 
-Do not begin the DSM integration milestone until representative Windows and macOS desktop acceptance evidence is recorded. There is no real NAS connectivity in this spike; all displayed telemetry remains explicitly marked DEMO.
+Application and DSM development now proceed in parallel with this unaccepted desktop experiment. The NAS dashboard and bound widgets use real provider snapshots; the separate demo widget remains explicitly marked DEMO. Real-device DSM validation and interactive desktop acceptance are both outstanding and must not be inferred from CI.
 
 ## Common UI and lifecycle
 
@@ -22,7 +22,7 @@ Before mutation, capture parent, GWL_STYLE, GWL_EXSTYLE, and screen bounds once.
 
 A UI timer detects a missing/replaced parent, restores to normal mode while Explorer is absent, and attempts reattachment when WorkerW returns. If Explorer destroys the child HWND, the main window recreates the Avalonia widget rather than reusing the destroyed handle. Automatic recreation is limited to three retries, followed by a normal replacement window; the user may explicitly retry attachment. Actual Avalonia behavior after Explorer destroys its HWND is an unverified risk.
 
-Limitations: Explorer internals vary across Windows builds; SetParent may fail with incompatible DPI awareness; virtual desktops, Show Desktop, child-window input/focus, transparency, native decorations, and display hotplug need interactive tests. Native style or parent changes may conflict with Avalonia's window management. Restoring uses the original rectangle, which might now be outside the work area after monitor removal. No guarantee is made for kiosk shells, non-Explorer shells, RDP, or secure desktops.
+Limitations: Explorer internals vary across Windows builds; SetParent may fail with incompatible DPI awareness; virtual desktops, Show Desktop, child-window input/focus, transparency, native decorations, and display hotplug need interactive tests. Native style or parent changes may conflict with Avalonia's window management. After native restoration, the shared UI keeps a draggable title strip within a current monitor work area, moving a lost window to the nearest work area. Attached child HWNDs are not repositioned through top-level Avalonia coordinates on display changes; use the main-window restore action first. No guarantee is made for kiosk shells, non-Explorer shells, RDP, or secure desktops.
 
 ## macOS
 
@@ -49,7 +49,7 @@ Record OS version/build, architecture, Avalonia version, monitor layout/scales, 
 
 Use `dotnet run --project src/NasMonitor.App/NasMonitor.App.csproj`, open the demo widget, and explicitly attach. Use Restore normal window before evaluating restoration. CI compilation and unit tests cannot fill in this table.
 
-## Next milestone after acceptance
+## Application monitoring (in progress)
 
 Keep platform hosting separate from telemetry. The existing roadmap requires multiple NAS profiles, Windows Credential Manager/macOS Keychain for secrets, strict TLS, DSM API discovery and authentication (including supported 2FA), and immutable timestamped snapshots. One cancellable polling coordinator per NAS feeds every widget; offline/stale/error is distinct from a zero reading, with bounded timeouts and retry backoff. No passwords, tokens or DSM sessions belong in plaintext settings or logs.
 
@@ -80,3 +80,10 @@ Download the artifact for your OS/architecture from a successful workflow run, u
 These archives are not signed/notarized installers or `.app` bundles. OS security controls may block downloaded builds; prefer building from the reviewed source locally in that case. Do not disable system-wide security controls. Packaging, signing and notarization remain a later milestone.
 
 For each manual test, record the tested commit SHA, artifact RID, OS version, monitor scaling/layout and the observed outcome in a report. Keep `not run`, `passed`, `failed` and `unsupported` separate, and do not mark the desktop milestone accepted based on a native API smoke report alone. Do not restart Explorer/Finder automatically from CI or the application; perform lifecycle tests deliberately on a desktop where it is safe to interrupt the shell.
+
+
+## Recovery from the main window
+
+The Desktop widget tab offers **Restore widget to normal window**, independently of controls inside the widget. It mirrors native hosting status and retains errors so restore can be retried. Explicit restore cancels automatic reattachment even if native rollback fails. Opening an existing widget also restores it before activation; closing the main window closes the widget and prevents queued native recovery from reopening it.
+
+Normal windows with a reachable title strip retain their positions, including negative coordinates and partial overlap across monitors. If that strip is lost, restore/recreation moves the window to the nearest valid work area using physical screen coordinates and display scaling. An oversized window is aligned with the work-area origin without forcing a resize. Missing screen information leaves position unchanged. Display-change notifications only relocate detached normal windows. These geometry rules have pure/headless tests; real mixed-DPI/hotplug behavior is still part of the pending manual matrix.
