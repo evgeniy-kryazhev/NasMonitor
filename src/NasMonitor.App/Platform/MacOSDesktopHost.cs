@@ -54,6 +54,8 @@ internal sealed class AppKitDesktopApi : IMacDesktopApi
     private const string ObjC = "/usr/lib/libobjc.A.dylib";
     private const string CoreGraphics = "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics";
     private const nuint CanJoinAllSpaces = 1, Stationary = 1 << 4, IgnoresCycle = 1 << 6;
+    internal static nint DesktopLevel => (nint)CGWindowLevelForKey(2) + 1;
+    internal const nuint DesktopBehavior = CanJoinAllSpaces | Stationary | IgnoresCycle;
     public MacWindowState Capture(IntPtr window)
     {
         if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException();
@@ -63,8 +65,8 @@ internal sealed class AppKitDesktopApi : IMacDesktopApi
     {
         var current = Capture(window);
         // kCGDesktopWindowLevelKey = 2. Just above wallpaper, below desktop icons and normal windows.
-        var level = (nint)CGWindowLevelForKey(2) + 1;
-        var behavior = CanJoinAllSpaces | Stationary | IgnoresCycle;
+        var level = DesktopLevel;
+        var behavior = DesktopBehavior;
         if (current.Level != level) SendValue(window, Selector("setLevel:"), level);
         if (current.CollectionBehavior != behavior) SendValue(window, Selector("setCollectionBehavior:"), unchecked((nint)behavior));
         // Do not activate Finder, reparent to Finder, add FullScreenAuxiliary, or use orderFrontRegardless.

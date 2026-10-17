@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace NasMonitor.App.Platform;
 
 public readonly record struct WindowRect(int Left, int Top, int Right, int Bottom);
-public readonly record struct WindowsWindowState(IntPtr Parent, long Style, long ExtendedStyle, WindowRect Bounds);
+public readonly record struct WindowsWindowState(IntPtr Parent, long Style, long ExtendedStyle, WindowRect Bounds, IntPtr Owner = default);
 
 // Boundary allows lifecycle/rollback tests without an Explorer desktop.
 public interface IWindowsDesktopApi
@@ -124,7 +124,12 @@ internal sealed class Win32DesktopApi : IWindowsDesktopApi
     public WindowsWindowState Capture(IntPtr window)
     {
         if (!GetWindowRect(window, out var r)) throw new Win32Exception();
-        return new(GetParent(window), GetStyle(window, -16), GetStyle(window, -20), new(r.Left, r.Top, r.Right, r.Bottom));
+        var style = GetStyle(window, -16);
+        var isChild = (style & WsChild) != 0;
+        // GetParent returns the OWNER for top-level windows; ownership is not child parenting.
+        return new(isChild ? GetParent(window) : IntPtr.Zero, style, GetStyle(window, -20),
+            new(r.Left, r.Top, r.Right, r.Bottom), isChild ? IntPtr.Zero : GetWindow(window, 4)); // GW_OWNER
+
     }
     public void Attach(IntPtr window, IntPtr desktop, WindowsWindowState original)
     {
@@ -137,11 +142,15 @@ internal sealed class Win32DesktopApi : IWindowsDesktopApi
     }
     public void Restore(IntPtr window, WindowsWindowState original)
     {
-        // A destroyed original owner must not prevent returning to a normal top-level window.
-        var parent = IsWindow(original.Parent) ? original.Parent : IntPtr.Zero;
+        var isChild = (original.Style & WsChild) != 0;
+        var parent = isChild && IsWindow(original.Parent) ? original.Parent : IntPtr.Zero;
         Reparent(window, parent);
-        SetStyle(window, -16, original.Style);
+        // If an original child parent is gone, fall back to a usable top-level window.
+        var style = isChild && parent == IntPtr.Zero ? (original.Style & ~WsChild) | WsPopup : original.Style;
+        SetStyle(window, -16, style);
         SetStyle(window, -20, original.ExtendedStyle);
+        if (!isChild)
+            SetStyle(window, -8, IsWindow(original.Owner) ? original.Owner.ToInt64() : 0); // GWLP_HWNDPARENT: owner
         Place(window, parent, original.Bounds);
     }
     private static void Place(IntPtr window, IntPtr parent, WindowRect rect)
@@ -179,6 +188,7 @@ internal sealed class Win32DesktopApi : IWindowsDesktopApi
     [StructLayout(LayoutKind.Sequential)] private struct Point { public int X, Y; }
     [DllImport("user32.dll", EntryPoint = "IsWindow")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool NativeIsWindow(IntPtr window);
     [DllImport("user32.dll")] private static extern IntPtr GetParent(IntPtr window);
+    [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr window, uint command);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr FindWindow(string className, string? name);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string className, string? name);
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr data);

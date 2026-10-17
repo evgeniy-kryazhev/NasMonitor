@@ -27,3 +27,9 @@ dotnet test tests/NasMonitor.App.Tests/NasMonitor.App.Tests.csproj --configurati
 ```
 
 Tests exercise lifecycle behavior with fake native APIs and the shared Avalonia UI headlessly. They do not establish native desktop placement. See [platform limitations and pending acceptance checks](docs/DESKTOP_HOSTS.md). DSM work remains gated on that acceptance.
+
+### Native checks and desktop testing
+
+GitHub Actions additionally tests native Win32 primitives on Windows and a real Avalonia NSWindow/AppKit property round trip on macOS arm64 and x64. These are API smoke checks, not visual desktop acceptance. The native test project is `tests/NasMonitor.NativeTests`; its Win32 tests are explicitly skipped off Windows.
+
+Successful CI runs provide unsigned self-contained Windows/macOS archives for manual testing. See [native checks, download instructions and acceptance matrix](docs/DESKTOP_HOSTS.md#automated-native-checks-and-downloadable-builds). No real NAS credentials are needed for the demo.

@@ -52,3 +52,31 @@ Use `dotnet run --project src/NasMonitor.App/NasMonitor.App.csproj`, open the de
 ## Next milestone after acceptance
 
 Keep platform hosting separate from telemetry. The existing roadmap requires multiple NAS profiles, Windows Credential Manager/macOS Keychain for secrets, strict TLS, DSM API discovery and authentication (including supported 2FA), and immutable timestamped snapshots. One cancellable polling coordinator per NAS feeds every widget; offline/stale/error is distinct from a zero reading, with bounded timeouts and retry backoff. No passwords, tokens or DSM sessions belong in plaintext settings or logs.
+
+## Automated native checks and downloadable builds
+
+The workflow runs shared headless/lifecycle tests on Windows, Linux, macOS arm64, and macOS x64 (`macos-15-intel`). An additional `NasMonitor.NativeTests` project calls real user32 on Windows using private hidden STATIC windows, **not Explorer windows**. It checks owned/unowned top-level restoration, screen-coordinate preservation through parenting, and rollback after an invalid-parent failure. These tests are explicitly skipped on other OSes; skipped tests are not native validation.
+
+Owner and parent are different concepts: GetParent can return an owner for a top-level window. The snapshot therefore records WS_CHILD parent and GW_OWNER separately, and restores a top-level owner through GWLP_HWNDPARENT after returning to top-level mode. A missing original child parent falls back to a top-level window rather than leaving WS_CHILD without a parent.
+
+On macOS the workflow starts the real Avalonia application with:
+
+```bash
+dotnet run --project src/NasMonitor.App/NasMonitor.App.csproj -c Release -- --native-host-smoke artifacts/appkit-smoke.json
+```
+
+This mode creates a real NSWindow on the main UI thread, applies the native properties twice, reads them back, restores the original properties, checks equality and exits with 0 on success or 1 on failure. Invalid/non-macOS invocation exits with 2. CI bounds the run to two minutes, so a missing WindowServer session or a hung native initialization fails rather than being silently treated as success. The JSON report records architecture, OS, levels, collection behaviors and outcome; it includes no NAS credentials or endpoint details. A crash before report writing is still a failed CI step, not a skipped check.
+
+These native tests validate API compatibility and local state transitions. Even if green, they do **not** validate WorkerW discovery, Explorer restart, visual ordering, Finder behavior, Spaces transitions or Mission Control. The interactive matrix above remains pending until a human tests it on the corresponding desktop.
+
+Successful Windows/macOS jobs also upload unsigned, self-contained development archives under Actions artifacts:
+
+- `NasMonitor-win-x64-unsigned`
+- `NasMonitor-osx-arm64-unsigned`
+- `NasMonitor-osx-x64-unsigned`
+
+Download the artifact for your OS/architecture from a successful workflow run, unpack its ZIP and then the `.tar.gz` inside it. On Windows start `NasMonitor.App.exe`; on macOS start `./NasMonitor.App` from Terminal. No separately installed .NET runtime is required. The inner tar archive preserves Unix execute permissions. macOS smoke mode is also available as `./NasMonitor.App --native-host-smoke ./appkit-smoke.json`.
+
+These archives are not signed/notarized installers or `.app` bundles. OS security controls may block downloaded builds; prefer building from the reviewed source locally in that case. Do not disable system-wide security controls. Packaging, signing and notarization remain a later milestone.
+
+For each manual test, record the tested commit SHA, artifact RID, OS version, monitor scaling/layout and the observed outcome in a report. Keep `not run`, `passed`, `failed` and `unsupported` separate, and do not mark the desktop milestone accepted based on a native API smoke report alone. Do not restart Explorer/Finder automatically from CI or the application; perform lifecycle tests deliberately on a desktop where it is safe to interrupt the shell.
