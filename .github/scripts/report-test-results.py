@@ -18,9 +18,11 @@ for report in sorted(Path('tests').glob('*/TestResults/*.trx')):
     root = ET.parse(report).getroot()
     counts = root.find('t:ResultSummary/t:Counters', ns)
     if counts is not None:
+        not_run = sum(result.get('outcome') == 'NotExecuted'
+                      for result in root.findall('t:Results/t:UnitTestResult', ns))
         annotation('notice', report.parent.parent.name, ', '.join(
             f'{name}={counts.get(name, "0")}'
-            for name in ('total', 'executed', 'passed', 'failed', 'notExecuted')))
+            for name in ('total', 'executed', 'passed', 'failed')) + f', skipped_or_not_run={not_run}')
     for result in root.findall('t:Results/t:UnitTestResult', ns):
         if result.get('outcome') != 'Failed':
             continue

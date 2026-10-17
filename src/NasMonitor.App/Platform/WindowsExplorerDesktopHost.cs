@@ -163,14 +163,18 @@ internal sealed class Win32DesktopApi : IWindowsDesktopApi
     }
     private static void Reparent(IntPtr window, IntPtr parent)
     {
-        Marshal.SetLastPInvokeError(0);
+        // Clear the OS error as required by SetParent/GetWindowLongPtr/SetWindowLongPtr.
+        // Marshal.SetLastPInvokeError only updates the managed cached value.
+        ClearNativeError(0);
         var previous = SetParent(window, parent);
         var error = Marshal.GetLastPInvokeError();
         if (previous == IntPtr.Zero && error != 0) throw new Win32Exception(error);
     }
     private static long GetStyle(IntPtr window, int index)
     {
-        Marshal.SetLastPInvokeError(0);
+        // Clear the OS error as required by SetParent/GetWindowLongPtr/SetWindowLongPtr.
+        // Marshal.SetLastPInvokeError only updates the managed cached value.
+        ClearNativeError(0);
         var value = IntPtr.Size == 8 ? GetWindowLongPtr(window, index) : new IntPtr(GetWindowLong(window, index));
         var error = Marshal.GetLastPInvokeError();
         if (value == IntPtr.Zero && error != 0) throw new Win32Exception(error);
@@ -178,11 +182,14 @@ internal sealed class Win32DesktopApi : IWindowsDesktopApi
     }
     private static void SetStyle(IntPtr window, int index, long value)
     {
-        Marshal.SetLastPInvokeError(0);
+        // Clear the OS error as required by SetParent/GetWindowLongPtr/SetWindowLongPtr.
+        // Marshal.SetLastPInvokeError only updates the managed cached value.
+        ClearNativeError(0);
         var previous = IntPtr.Size == 8 ? SetWindowLongPtr(window, index, new IntPtr(value)) : new IntPtr(SetWindowLong(window, index, unchecked((int)value)));
         var error = Marshal.GetLastPInvokeError();
         if (previous == IntPtr.Zero && error != 0) throw new Win32Exception(error);
     }
+    [DllImport("kernel32.dll", EntryPoint = "SetLastError")] private static extern void ClearNativeError(uint error);
     private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr data);
     [StructLayout(LayoutKind.Sequential)] private struct Rect { public int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)] private struct Point { public int X, Y; }

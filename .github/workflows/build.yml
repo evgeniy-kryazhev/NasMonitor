@@ -1,7 +1,7 @@
 name: Build desktop spike
 on:
   push:
-    branches: [main, 'feat/**', 'fix/**']
+    branches: [main]
   pull_request:
     branches: [main, 'feat/desktop-widget-spike']
   workflow_dispatch:
