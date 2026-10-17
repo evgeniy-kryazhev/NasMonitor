@@ -66,8 +66,7 @@ internal sealed class SynologyMetricsSession(HttpClient client, DsmProtocol prot
         if (forceRefresh || DateTimeOffset.UtcNow >= nextSlowPoll)
         {
             systemData = await ReadGroupAsync(SystemUri, SystemApi, "info", cancellationToken).ConfigureAwait(false);
-            storageData = await ReadGroupAsync(StorageUri, StorageApi, "load_info", cancellationToken)
-                .ConfigureAwait(false);
+            storageData = await ReadStorageAsync(cancellationToken).ConfigureAwait(false);
             nextSlowPoll = DateTimeOffset.UtcNow.AddSeconds(60);
         }
 
@@ -116,10 +115,42 @@ internal sealed class SynologyMetricsSession(HttpClient client, DsmProtocol prot
         }
     }
 
+    private async Task<DsmMetricGroup> ReadStorageAsync(CancellationToken cancellationToken)
+    {
+        // Info Center can be delegated independently of Storage Manager administration.
+        DsmMetricGroup informationCenter = await ReadGroupAsync(SystemUri,
+            SystemApi,
+            "info",
+            cancellationToken,
+            type: "storage").ConfigureAwait(false);
+        (NasMetric primaryMetric, _) = DsmSnapshotParser.ReadVolumes(informationCenter);
+        if (primaryMetric.Availability == MetricAvailability.Available)
+        {
+            return informationCenter;
+        }
+
+        DsmMetricGroup storageManager = await ReadGroupAsync(StorageUri,
+            StorageApi,
+            "load_info",
+            cancellationToken).ConfigureAwait(false);
+        (NasMetric fallbackMetric, _) = DsmSnapshotParser.ReadVolumes(storageManager);
+        if (fallbackMetric.Availability == MetricAvailability.Available)
+        {
+            return storageManager;
+        }
+
+        // Preserve a concrete primary failure instead of replacing it with a missing fallback API.
+        return primaryMetric.Availability is MetricAvailability.PermissionDenied or MetricAvailability.Invalid ||
+               fallbackMetric.Availability == MetricAvailability.Unsupported
+            ? informationCenter
+            : storageManager;
+    }
+
     private async Task<DsmMetricGroup> ReadGroupAsync(Uri? uri,
         string api,
         string method,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? type = null)
     {
         DateTimeOffset collectedAt = DateTimeOffset.UtcNow;
         if (uri is null)
@@ -128,6 +159,11 @@ internal sealed class SynologyMetricsSession(HttpClient client, DsmProtocol prot
         }
 
         var parameters = new Dictionary<string, string> { ["api"] = api, ["version"] = "1", ["method"] = method };
+        if (type is not null)
+        {
+            parameters["type"] = type;
+        }
+
         if (api == StorageApi)
         {
             // Storage CGI dispatches by action as well as the standard Web API method.

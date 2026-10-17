@@ -56,20 +56,26 @@ internal static partial class DsmSnapshotParser
             volumes);
     }
 
-    private static (NasMetric, IReadOnlyList<NasVolume>) ReadVolumes(DsmMetricGroup group)
+    internal static (NasMetric, IReadOnlyList<NasVolume>) ReadVolumes(DsmMetricGroup group)
     {
         JsonElement? array = Child(group.Data, "volumes");
+        bool informationCenterFormat = array is null;
+        if (informationCenterFormat)
+        {
+            array = Child(group.Data, "vol_info");
+        }
+
         var volumes = new List<NasVolume>();
-        bool invalid = false;
+        bool invalid = array is not null && array.Value.ValueKind != JsonValueKind.Array;
         if (array is { ValueKind: JsonValueKind.Array })
         {
             foreach (JsonElement volume in array.Value.EnumerateArray())
             {
-                string? id = Text(volume, "id");
-                JsonElement? size = Child(volume, "size");
-                double? used = Number(size, "used");
-                double? total = Number(size, "total");
-                if (id is null || volumes.Any(existing => existing.Id == id) ||
+                string? id = Text(volume, informationCenterFormat ? "name" : "id");
+                JsonElement? size = informationCenterFormat ? volume : Child(volume, "size");
+                double? used = Number(size, informationCenterFormat ? "used_size" : "used");
+                double? total = Number(size, informationCenterFormat ? "total_size" : "total");
+                if (string.IsNullOrWhiteSpace(id) || volumes.Any(existing => existing.Id == id) ||
                     used is null || total is null || !double.IsFinite(used.Value) || !double.IsFinite(total.Value) ||
                     total <= 0 || used < 0 || used > total)
                 {

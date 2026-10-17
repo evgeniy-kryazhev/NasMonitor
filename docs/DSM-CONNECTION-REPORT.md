@@ -1,5 +1,47 @@
 # Подключение DSM, Semi.Avalonia и кастомизация — 2026-10-17
 
+## Чтение заполнения через API Информационного центра
+
+По запросу пользователя исследована альтернатива Storage Manager load_info,
+который возвращает 105 без administrators. Официальная таблица кодов определяет
+105 как отказ текущей сессии в разрешении, без указания роли. Документация
+делегирования включает Info Center > Storage в роль «Мониторинг системы».
+Формат info type=storage подтверждён исходниками существующих клиентов DSM;
+это не гарантия серверных прав конкретной версии.
+
+Основной путь теперь SYNO.Core.System v1 info type=storage. Parse читает
+vol_info[].name/used_size/total_size, вычисляет взвешенное заполнение полных
+томов. Успех этого запроса не вызывает Storage Manager. Отказ/пустой/невалидный
+ответ допускает резервный прежний load_info, без новой сессии. Результаты
+источников не смешиваются; дубликаты/невалидный том не создают правдоподобный
+частичный процент. Истечение сессии и отмена не скрываются резервным запросом.
+
+Implemented / Automated-tested: 10 новых случаев проверяют однотомный ответ,
+агрегирование разных размеров, байты как строки/числа, cache/manual refresh,
+отсутствие вызова запрещённого Storage Manager при успехе основного пути,
+резерв при 104/105/пустом/неверном массиве, дубликаты/неверные размеры и 119.
+Запрос проверен на type=storage, v1, POST SID, CSRF header и отсутствие query.
+
+Проверки:
+- `dotnet build NasMonitor.slnx -c Release`: 0 ошибок/предупреждений.
+- `dotnet test NasMonitor.slnx -c Release --no-build`: 115/115 (23 Core + 92 Connection).
+- `./scripts/publish.ps1 -Runtime win-x64`: успешная публикация EXE и ZIP Windows.
+
+Изменены SynologyMetricsSession.cs, DsmSnapshotParser.cs, DsmMetricsTests.cs,
+DECISIONS.md, DSM-MONITORING.md, DSM-CONNECTION-TESTING.md и этот отчёт.
+Пользователь 2026-10-17 подтвердил «Работает» и приложил Windows-скриншот:
+storage 30%, статус «В сети», остальные метрики доступны. Manually-tested
+пользователем: отображение заполнения после перехода на Info Center в контексте
+испытания с monitoring и делегированной ролью без administrators. Членство
+в группах повторно не показывалось; вывод основан на контексте испытания.
+Версия DSM/точная модель, сверка 30% с DSM, длительная работа и несколько NAS
+остаются Unverified. macOS пакеты не пересобирались и не запускались.
+Сырой payload не получали, к NAS из среды разработки не входили.
+
+Источники: [код 105](https://kb.synology.com/en-us/DG/DSM_Login_Web_API_Guide/2),
+[делегированные роли](https://kb.synology.com/en-br/DSM/help/DSM/AdminCenter/file_user_delegate?version=7),
+[запрос и разбор storage в Homarr](https://github.com/homarr-labs/homarr/blob/dev/packages/integrations/src/synology/synology-client.ts).
+
 ## Диагностика хранилища при работающих остальных метриках
 
 Пользовательским скриншотом подтверждены реальные CPU/RAM/сеть/температура/uptime

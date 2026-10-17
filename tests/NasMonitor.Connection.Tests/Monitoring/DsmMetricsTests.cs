@@ -35,8 +35,131 @@ public sealed class DsmMetricsTests
                                      {"id":"volume2","size":{"used":"240","total":"400"}}]}}
                                    """;
 
+    private const string InformationCenterStorage =
+        """{"success":true,"data":{"vol_info":[{"name":"volume_1","used_size":"250","total_size":"1000"}]}}""";
+
     private static NasProfile Profile =>
         new(Guid.NewGuid(), "Fixture NAS", new Uri("https://nas.example:5001"), "fixture");
+
+    [TestMethod]
+    public async Task InformationCenterReadsVolumeWithoutCallingDeniedStorageManagerAndCachesIt()
+    {
+        using var handler = new DsmHandler
+        {
+            InformationCenterStorageResponse = InformationCenterStorage,
+            StorageResponse = """{"success":false,"error":{"code":105}}""",
+            RequireCsrfHeader = true
+        };
+        var factory = new SynologyMetricsSessionFactory(() => new HttpClient(handler, false));
+        await using INasMetricsSession session =
+            await factory.ConnectAsync(Profile, "fixture-password", null, CancellationToken.None);
+
+        NasSnapshot first = await session.ReadAsync(CancellationToken.None);
+        NasSnapshot cached = await session.ReadAsync(CancellationToken.None);
+
+        Assert.AreEqual(25.0, first.Storage!.Value);
+        Assert.AreEqual(MetricAvailability.Available, first.Storage.Availability);
+        NasVolume volume = first.Volumes!.Single();
+        Assert.AreEqual("volume_1", volume.Id);
+        Assert.AreEqual(250.0, volume.UsedBytes);
+        Assert.AreEqual(1000.0, volume.TotalBytes);
+        Assert.AreEqual(first.Storage.CollectedAt, cached.Storage!.CollectedAt);
+        Assert.AreEqual(12.0, first.Cpu.Value);
+        Assert.AreEqual(39.0, first.TemperatureCelsius!.Value);
+        Assert.IsFalse(handler.Requests.Any(request => request.Form["api"] == "SYNO.Storage.CGI.Storage"));
+        CapturedRequest storageRequest = handler.Requests.Single(request => request.Form.GetValueOrDefault("type") == "storage");
+        Assert.AreEqual("SYNO.Core.System", storageRequest.Form["api"]);
+        Assert.AreEqual("info", storageRequest.Form["method"]);
+        Assert.AreEqual("1", storageRequest.Form["version"]);
+        Assert.AreEqual("fixture-sid", storageRequest.Form["_sid"]);
+        Assert.AreEqual("fixture-token", storageRequest.SynoToken);
+        Assert.AreEqual("", storageRequest.Uri.Query);
+
+        await session.ReadAsync(CancellationToken.None, true);
+        Assert.AreEqual(2, handler.Requests.Count(request => request.Form.GetValueOrDefault("type") == "storage"));
+        Assert.AreEqual(1, handler.Requests.Count(request => request.Form["method"] == "login"));
+    }
+
+    [TestMethod]
+    public async Task InformationCenterAggregatesWholeVolumesWithoutAveragingPercentages()
+    {
+        using var handler = new DsmHandler
+        {
+            InformationCenterStorageResponse = """
+                {"success":true,"data":{"vol_info":[
+                  {"name":"first","used_size":"80","total_size":"100"},
+                  {"name":"second","used_size":240,"total_size":400}]}}
+                """
+        };
+        var factory = new SynologyMetricsSessionFactory(() => new HttpClient(handler, false));
+        await using INasMetricsSession session =
+            await factory.ConnectAsync(Profile, "fixture-password", null, CancellationToken.None);
+
+        NasSnapshot snapshot = await session.ReadAsync(CancellationToken.None);
+
+        Assert.AreEqual(64.0, snapshot.Storage!.Value);
+        Assert.AreEqual(2, snapshot.Volumes!.Count);
+    }
+
+    [DataTestMethod]
+    [DataRow("{\"success\":false,\"error\":{\"code\":105}}")]
+    [DataRow("{\"success\":false,\"error\":{\"code\":104}}")]
+    [DataRow("{\"success\":true,\"data\":{\"vol_info\":[]}}")]
+    [DataRow("{\"success\":true,\"data\":{\"vol_info\":{}}}")]
+    public async Task UnavailableInformationCenterUsesLegacyStorageWithoutAnotherLogin(string informationCenterResponse)
+    {
+        using var handler = new DsmHandler { InformationCenterStorageResponse = informationCenterResponse };
+        var factory = new SynologyMetricsSessionFactory(() => new HttpClient(handler, false));
+        await using INasMetricsSession session =
+            await factory.ConnectAsync(Profile, "fixture-password", null, CancellationToken.None);
+
+        NasSnapshot snapshot = await session.ReadAsync(CancellationToken.None);
+
+        Assert.AreEqual(64.0, snapshot.Storage!.Value);
+        Assert.AreEqual(1, handler.Requests.Count(request => request.Form["method"] == "load_info"));
+        Assert.AreEqual(1, handler.Requests.Count(request => request.Form["method"] == "login"));
+    }
+
+    [DataTestMethod]
+    [DataRow("{\"success\":true,\"data\":{\"vol_info\":[{\"name\":\"valid\",\"used_size\":25,\"total_size\":100},{\"name\":\"invalid\",\"used_size\":5,\"total_size\":0}]}}")]
+    [DataRow("{\"success\":true,\"data\":{\"vol_info\":[{\"name\":\"same\",\"used_size\":25,\"total_size\":100},{\"name\":\"same\",\"used_size\":5,\"total_size\":10}]}}")]
+    [DataRow("{\"success\":true,\"data\":{\"vol_info\":[{\"name\":\"volume\",\"used_size\":110,\"total_size\":100}]}}")]
+    public async Task InvalidInformationCenterDataIsNeverShownAsPartialUsage(string response)
+    {
+        using var handler = new DsmHandler
+        {
+            InformationCenterStorageResponse = response,
+            StorageResponse = """{"success":false,"error":{"code":105}}"""
+        };
+        var factory = new SynologyMetricsSessionFactory(() => new HttpClient(handler, false));
+        await using INasMetricsSession session =
+            await factory.ConnectAsync(Profile, "fixture-password", null, CancellationToken.None);
+
+        NasSnapshot snapshot = await session.ReadAsync(CancellationToken.None);
+
+        Assert.AreEqual(MetricAvailability.Invalid, snapshot.Storage!.Availability);
+        Assert.IsNull(snapshot.Storage.Value);
+        Assert.AreEqual(12.0, snapshot.Cpu.Value);
+    }
+
+    [TestMethod]
+    public async Task InformationCenterSessionExpiryDoesNotTriggerLegacyStorage()
+    {
+        using var handler = new DsmHandler
+        {
+            InformationCenterStorageResponse = """{"success":false,"error":{"code":119}}"""
+        };
+        var factory = new SynologyMetricsSessionFactory(() => new HttpClient(handler, false));
+        await using INasMetricsSession session =
+            await factory.ConnectAsync(Profile, "fixture-password", null, CancellationToken.None);
+
+        NasProviderException failure = await Assert.ThrowsExceptionAsync<NasProviderException>(() =>
+            session.ReadAsync(CancellationToken.None));
+
+        Assert.AreEqual(ConnectionError.SessionExpired, failure.Error);
+        Assert.AreEqual(119, failure.DsmCode);
+        Assert.IsFalse(handler.Requests.Any(request => request.Form["method"] == "load_info"));
+    }
 
     [TestMethod]
     public async Task MonitoringLoginOmitsApplicationSessionAndLogoutTargetsReturnedSid()
@@ -93,7 +216,7 @@ public sealed class DsmMetricsTests
 
         await session.ReadAsync(CancellationToken.None, true);
 
-        Assert.AreEqual(2, handler.Requests.Count(request => request.Form["method"] == "info"));
+        Assert.AreEqual(2, handler.Requests.Count(request => request.Form["method"] == "info" && !request.Form.ContainsKey("type")));
         Assert.AreEqual(2, handler.Requests.Count(request => request.Form["method"] == "load_info"));
         Assert.AreEqual(1, handler.Requests.Count(request => request.Form["method"] == "login"));
     }
@@ -138,7 +261,7 @@ public sealed class DsmMetricsTests
             Assert.IsTrue(first.Metrics.All(metric => metric!.Availability == MetricAvailability.Available));
             Assert.AreEqual(first.Storage.CollectedAt, second.Storage!.CollectedAt);
             Assert.AreEqual(1, handler.Requests.Count(request => request.Form.GetValueOrDefault("method") == "login"));
-            Assert.AreEqual(1, handler.Requests.Count(request => request.Form.GetValueOrDefault("method") == "info"));
+            Assert.AreEqual(1, handler.Requests.Count(request => request.Form.GetValueOrDefault("method") == "info" && !request.Form.ContainsKey("type")));
             Assert.AreEqual(1,
                 handler.Requests.Count(request => request.Form.GetValueOrDefault("method") == "load_info"));
             Assert.AreEqual("load_info",
@@ -336,6 +459,12 @@ public sealed class DsmMetricsTests
             init;
         } = Storage;
 
+        internal string InformationCenterStorageResponse
+        {
+            get;
+            init;
+        } = """{"success":false,"error":{"code":104}}""";
+
         internal string MetricsDiscovery
         {
             get;
@@ -365,7 +494,7 @@ public sealed class DsmMetricsTests
                 "query" => form["query"] == "SYNO.API.Auth" ? AuthDiscovery : MetricsDiscovery,
                 "login" => """{"success":true,"data":{"sid":"fixture-sid","synotoken":"fixture-token"}}""",
                 "get" => UtilizationResponse,
-                "info" => SystemResponse,
+                "info" => form.GetValueOrDefault("type") == "storage" ? InformationCenterStorageResponse : SystemResponse,
                 "load_info" => StorageResponse,
                 "logout" => """{"success":true}""",
                 _ => throw new InvalidOperationException("Unexpected fixture method.")
