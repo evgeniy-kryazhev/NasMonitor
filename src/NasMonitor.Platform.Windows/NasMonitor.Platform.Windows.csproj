@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../NasMonitor.Core/NasMonitor.Core.csproj" />
+    <ProjectReference Include="../NasMonitor.Hosting/NasMonitor.Hosting.csproj" />
+  </ItemGroup>
+</Project>

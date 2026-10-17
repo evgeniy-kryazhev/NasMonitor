@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NasMonitor.App/NasMonitor.App.csproj" />
+    <Project Path="src/NasMonitor.Core/NasMonitor.Core.csproj" />
+    <Project Path="src/NasMonitor.Hosting/NasMonitor.Hosting.csproj" />
+    <Project Path="src/NasMonitor.Infrastructure/NasMonitor.Infrastructure.csproj" />
+    <Project Path="src/NasMonitor.Providers.Synology/NasMonitor.Providers.Synology.csproj" />
+    <Project Path="src/NasMonitor.Platform.MacOS/NasMonitor.Platform.MacOS.csproj" />
+    <Project Path="src/NasMonitor.Platform.Windows/NasMonitor.Platform.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NasMonitor.Connection.Tests/NasMonitor.Connection.Tests.csproj" />
+    <Project Path="tests/NasMonitor.Core.Tests/NasMonitor.Core.Tests.csproj" />
+  </Folder>
+</Solution>

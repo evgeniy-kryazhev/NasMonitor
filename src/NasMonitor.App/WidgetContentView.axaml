@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:NasMonitor.App"
+             x:Class="NasMonitor.App.WidgetContentView" x:DataType="local:SpikeViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource SemiColorText0}" />
+    </Style>
+    <Style Selector="TextBlock.value">
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+  </UserControl.Styles>
+  <ThemeVariantScope RequestedThemeVariant="{Binding WidgetThemeVariant}">
+    <Border Padding="16" Background="{DynamicResource SemiColorBackground0}"
+            BorderThickness="1" BorderBrush="{DynamicResource SemiColorBorder}"
+            CornerRadius="{Binding SurfaceCornerRadius}" Opacity="{Binding SurfaceOpacity}">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="MetricStack" Spacing="14">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock Text="{Binding WidgetTitle}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{Binding DeviceDescription}" />
+            <TextBlock Grid.Column="1" Text="{Binding MonitorStatus}" Foreground="{Binding AccentBrush}"
+                       FontSize="11" MaxWidth="120" TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{Binding MonitorDetail}" VerticalAlignment="Center" />
+          </Grid>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="14" IsVisible="{Binding ShowResourceSection}">
+            <StackPanel x:Name="CpuMetrics" Spacing="5" IsVisible="{Binding ShowCpu}" ToolTip.Tip="{Binding CpuDetail}">
+              <TextBlock Text="{local:Text CpuLabel}" Opacity="0.7" />
+              <TextBlock Classes="value" Text="{Binding CpuText}" />
+              <ProgressBar Value="{Binding Cpu}" Width="{Binding #CpuMetrics.Bounds.Width}" MinWidth="0"
+                           Maximum="100" Height="5" Foreground="{Binding AccentBrush}" />
+            </StackPanel>
+            <StackPanel x:Name="RamMetrics" Grid.Column="1" Spacing="5" IsVisible="{Binding ShowRam}" ToolTip.Tip="{Binding RamDetail}">
+              <TextBlock Text="{local:Text RamLabel}" Opacity="0.7" />
+              <TextBlock Classes="value" Text="{Binding RamText}" />
+              <ProgressBar Value="{Binding Ram}" Width="{Binding #RamMetrics.Bounds.Width}" MinWidth="0"
+                           Maximum="100" Height="5" Foreground="{Binding AccentBrush}" />
+            </StackPanel>
+          </Grid>
+          <StackPanel Spacing="10" IsVisible="{Binding ShowStorage}" ToolTip.Tip="{Binding StorageDetail}">
+            <Separator Margin="0,2,0,4" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{local:Text StorageLabel}" Opacity="0.7" />
+              <TextBlock Grid.Column="1" Text="{Binding StorageText}" />
+            </Grid>
+            <ProgressBar Value="{Binding StorageUsage}" Maximum="100" Height="6" Foreground="{Binding AccentBrush}" />
+            <Separator Margin="0,4,0,2" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="14" IsVisible="{Binding ShowNetwork}">
+            <StackPanel Spacing="5" ToolTip.Tip="{Binding DownloadDetail}">
+              <TextBlock Text="{local:Text DownloadLabel}" Opacity="0.7" />
+              <TextBlock Classes="value" Text="{Binding DownloadText}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="5" ToolTip.Tip="{Binding UploadDetail}">
+              <TextBlock Text="{local:Text UploadLabel}" Opacity="0.7" />
+              <TextBlock Classes="value" Text="{Binding UploadText}" />
+            </StackPanel>
+          </Grid>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="14" IsVisible="{Binding ShowSystemSection}">
+            <StackPanel Spacing="5" IsVisible="{Binding ShowTemperature}" ToolTip.Tip="{Binding TemperatureDetail}">
+              <TextBlock Text="{local:Text TemperatureLabel}" Opacity="0.7" />
+              <TextBlock Classes="value" Text="{Binding TemperatureText}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="5" IsVisible="{Binding ShowUptime}" ToolTip.Tip="{Binding UptimeDetail}">
+              <TextBlock Text="{local:Text UptimeLabel}" Opacity="0.7" />
+              <TextBlock Classes="value" Text="{Binding UptimeText}" />
+            </StackPanel>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock Text="{Binding LastUpdate}" FontSize="11" Opacity="0.65" IsVisible="{Binding ShowLastUpdate}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <Button Grid.Column="1" Content="↻" Command="{Binding RefreshMetricsCommand}" Padding="6,2" MinHeight="24"
+                    ToolTip.Tip="{local:Text MonitorRefresh}" AutomationProperties.Name="{local:Text MonitorRefresh}" />
+          </Grid>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+  </ThemeVariantScope>
+</UserControl>

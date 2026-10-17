@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Semi.Avalonia" Version="11.3.22" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.12" />
+    <ProjectReference Include="../NasMonitor.Core/NasMonitor.Core.csproj" />
+    <ProjectReference Include="../NasMonitor.Infrastructure/NasMonitor.Infrastructure.csproj" />
+    <ProjectReference Include="../NasMonitor.Providers.Synology/NasMonitor.Providers.Synology.csproj" />
+    <ProjectReference Include="../NasMonitor.Platform.Windows/NasMonitor.Platform.Windows.csproj" />
+    <ProjectReference Include="../NasMonitor.Platform.MacOS/NasMonitor.Platform.MacOS.csproj" />
+  </ItemGroup>
+</Project>

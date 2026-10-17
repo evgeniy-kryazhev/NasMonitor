@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:NasMonitor.App"
+        xmlns:core="using:NasMonitor.Core"
+        x:Class="NasMonitor.App.WidgetSettingsView" x:DataType="local:SpikeViewModel">
+  <Grid x:Name="PageContent" Margin="28,28,0,0" RowDefinitions="Auto,*">
+    <StackPanel x:Name="HeaderContent" Spacing="12" Margin="0,0,28,0">
+      <TextBlock Text="{local:Text WidgetSettingsTitle}" FontSize="28" FontWeight="SemiBold" />
+      <TextBlock Text="{local:Text MonitorSource}" />
+      <ComboBox ItemsSource="{Binding AvailableNas}" SelectedItem="{Binding SelectedNas, Mode=TwoWay}"
+                PlaceholderText="{local:Text MonitorChooseSource}" HorizontalAlignment="Stretch"
+                AutomationProperties.Name="{local:Text MonitorSource}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="core:NasProfile">
+            <TextBlock Text="{Binding Name}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <Button Content="{local:Text MonitorRefresh}" Command="{Binding RefreshMetricsCommand}" HorizontalAlignment="Left" />
+      <TextBlock Text="{Binding MonitorDetail}" IsVisible="{Binding HasMonitorDetail}" TextWrapping="Wrap" Opacity="0.65" />
+    </StackPanel>
+    <TabControl x:Name="SettingsTabs" Grid.Row="1" Margin="0,20,0,0"
+                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+      <TabItem Header="{local:Text AppearanceTitle}">
+        <ScrollViewer x:Name="AppearanceScroll" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel x:Name="AppearanceContent" Margin="0,16,28,28" Spacing="16">
+            <Grid ColumnSpacing="24">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MinWidth="280" />
+                <ColumnDefinition Width="*" MinWidth="260" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Spacing="10">
+                <TextBlock Text="{local:Text AppearanceName}" />
+                <TextBox x:Name="AppearanceName" MaxLength="60" AutomationProperties.Name="{local:Text AppearanceName}" />
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
+                  <TextBlock Text="{local:Text AppearanceAccent}" />
+                  <TextBlock Grid.Column="1" Text="{local:Text AppearanceTheme}" />
+                  <TextBox x:Name="AppearanceAccent" Grid.Row="1" MaxLength="7" Watermark="#35B89A"
+                     AutomationProperties.Name="{local:Text AppearanceAccent}" />
+                  <ComboBox x:Name="AppearanceTheme" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch"
+                      AutomationProperties.Name="{local:Text AppearanceTheme}">
+                    <ComboBoxItem Content="{local:Text AppearanceFollowApplication}" />
+                    <ComboBoxItem Content="{local:Text LightTheme}" />
+                    <ComboBoxItem Content="{local:Text DarkTheme}" />
+                  </ComboBox>
+                </Grid>
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
+                  <TextBlock Text="{local:Text AppearanceOpacity}" />
+                  <TextBlock Grid.Column="1" Text="{local:Text AppearanceCorners}" />
+                  <NumericUpDown x:Name="AppearanceOpacity" Grid.Row="1" Minimum="35" Maximum="100" Increment="5" FormatString="0"
+                           AutomationProperties.Name="{local:Text AppearanceOpacity}" />
+                  <NumericUpDown x:Name="AppearanceCorners" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="32" FormatString="0"
+                           AutomationProperties.Name="{local:Text AppearanceCorners}" />
+                </Grid>
+                <WrapPanel>
+                  <CheckBox x:Name="AppearanceShowCpu" Content="{local:Text CpuLabel}" Margin="0,0,18,0" />
+                  <CheckBox x:Name="AppearanceShowRam" Content="{local:Text RamLabel}" Margin="0,0,18,0" />
+                  <CheckBox x:Name="AppearanceShowStorage" Content="{local:Text StorageLabel}" Margin="0,0,18,0" />
+                  <CheckBox x:Name="AppearanceShowNetwork" Content="{local:Text NetworkLabel}" Margin="0,0,18,0" />
+                  <CheckBox x:Name="AppearanceShowTemperature" Content="{local:Text TemperatureLabel}" Margin="0,0,18,0" />
+                  <CheckBox x:Name="AppearanceShowUptime" Content="{local:Text UptimeLabel}" Margin="0,0,18,0" />
+                  <CheckBox x:Name="AppearanceShowUpdate" Content="{local:Text AppearanceShowUpdate}" />
+                </WrapPanel>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="12">
+                <TextBlock Text="{local:Text AppearancePreview}" Opacity="0.65" />
+                <Border Background="{DynamicResource SemiColorFill0}" CornerRadius="16" Padding="8">
+                  <local:WidgetContentView x:Name="AppearancePreview" VerticalAlignment="Top" />
+                </Border>
+                <TextBlock Text="{local:Text AppearancePreviewHelp}" TextWrapping="Wrap" FontSize="12" Opacity="0.65" />
+              </StackPanel>
+            </Grid>
+            <WrapPanel>
+              <Button Content="{local:Text AppearanceApply}" Click="ApplyAppearanceClicked" Margin="0,0,8,8" />
+              <Button Content="{local:Text AppearanceReset}" Click="ResetAppearanceClicked" Margin="0,0,0,8" />
+            </WrapPanel>
+            <TextBlock x:Name="AppearanceError" TextWrapping="Wrap" Foreground="{DynamicResource SemiColorDanger}" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="{local:Text PlacementTab}">
+        <ScrollViewer x:Name="PlacementScroll" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel x:Name="PlacementContent" Margin="0,16,28,28" Spacing="16">
+            <TextBlock Text="{local:Text PlacementTitle}" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="{local:Text WidgetHeightHelp}" TextWrapping="Wrap" Opacity="0.65" />
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+              <TextBlock Text="{local:Text PhysicalPositionX}" />
+              <TextBlock Grid.Column="1" Text="{local:Text PhysicalPositionY}" />
+              <NumericUpDown x:Name="PositionX" Grid.Row="1" Minimum="-100000" Maximum="100000" FormatString="0" />
+              <NumericUpDown x:Name="PositionY" Grid.Row="1" Grid.Column="1" Minimum="-100000" Maximum="100000" FormatString="0" />
+              <TextBlock Grid.Row="2" Text="{local:Text LogicalWidth}" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{local:Text LogicalHeight}" />
+              <NumericUpDown x:Name="WidgetWidth" Grid.Row="3" Minimum="260" Maximum="720" FormatString="0" />
+              <NumericUpDown x:Name="WidgetHeight" Grid.Row="3" Grid.Column="1" Minimum="{Binding MinimumWidgetHeight}"
+                       Maximum="600" FormatString="0" />
+            </Grid>
+            <CheckBox x:Name="Locked" Content="{local:Text LockWidget}" IsChecked="True" />
+            <WrapPanel Orientation="Horizontal">
+              <Button x:Name="DragModeButton" Content="{local:Text EnableDragMode}" Click="DragModeClicked" Margin="0,0,8,8" />
+              <Button Content="{local:Text ApplyAndSave}" Click="ApplyClicked" Margin="0,0,8,8" />
+              <Button Content="{local:Text RetryHost}" Click="RetryClicked" Margin="0,0,0,8" />
+            </WrapPanel>
+            <TextBlock Text="{Binding StorageStatus}" TextWrapping="Wrap" FontSize="12" />
+            <TextBlock Text="{local:Text ManagerHelp}" TextWrapping="Wrap" Opacity="0.65" />
+            <Expander Header="{local:Text DesktopDiagnostics}" HorizontalAlignment="Stretch">
+              <StackPanel Spacing="8">
+                <TextBlock Text="{Binding HostStatus}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                <TextBlock Text="{local:Text AcceptanceReminder}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Expander>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</UserControl>

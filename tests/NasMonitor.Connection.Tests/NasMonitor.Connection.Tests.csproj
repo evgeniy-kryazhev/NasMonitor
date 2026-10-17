@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.6.4" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
+    <ProjectReference Include="../../src/NasMonitor.Providers.Synology/NasMonitor.Providers.Synology.csproj" />
+    <ProjectReference Include="../../src/NasMonitor.Infrastructure/NasMonitor.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/NasMonitor.Platform.Windows/NasMonitor.Platform.Windows.csproj" />
+    <ProjectReference Include="../../src/NasMonitor.App/NasMonitor.App.csproj" />
+  </ItemGroup>
+</Project>

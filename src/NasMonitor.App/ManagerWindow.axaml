@@ -1,0 +1,56 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:NasMonitor.App"
+        xmlns:core="using:NasMonitor.Core"
+        x:Class="NasMonitor.App.ManagerWindow"
+        Title="{local:Text ApplicationTitle}" Width="1120" Height="800" MinWidth="940" MinHeight="650">
+  <Grid ColumnDefinitions="220,*">
+    <Border Background="{DynamicResource SemiColorNavBackground}"
+            BorderBrush="{DynamicResource SemiColorBorder}" BorderThickness="0,0,1,0">
+      <Grid Margin="16,28,16,20" RowDefinitions="Auto,*,Auto" RowSpacing="28">
+        <StackPanel Margin="12,0" Spacing="4">
+          <TextBlock Text="{local:Text ApplicationTitle}" FontSize="22" FontWeight="SemiBold" />
+          <TextBlock Text="{local:Text NavigationCaption}" FontSize="12" Opacity="0.6" />
+        </StackPanel>
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="24">
+            <ListBox x:Name="Navigation" SelectedIndex="0"
+                     SelectionChanged="NavigationChanged" Background="Transparent" BorderThickness="0"
+                     AutomationProperties.Name="{local:Text NavigationLabel}">
+              <ListBoxItem Padding="14,12" Content="{local:Text NavigationWidget}" />
+              <ListBoxItem Padding="14,12" Content="{local:Text NavigationConnections}" />
+            </ListBox>
+            <StackPanel Spacing="8">
+              <TextBlock Text="{local:Text SidebarNasTitle}" Margin="14,0" FontSize="12" FontWeight="SemiBold" Opacity="0.65" />
+              <ListBox x:Name="SidebarNas" x:DataType="local:NasConnectionsViewModel"
+                       ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                       IsEnabled="{Binding CanEdit}" SelectionChanged="SidebarNasChanged" Tapped="SidebarNasTapped"
+                       KeyDown="SidebarNasKeyDown" MaxHeight="280" Background="Transparent" BorderThickness="0"
+                       AutomationProperties.Name="{local:Text SidebarNasTitle}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="core:NasProfile">
+                    <StackPanel Spacing="3" Margin="6,4" ToolTip.Tip="{Binding Endpoint}">
+                      <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Endpoint}" TextTrimming="CharacterEllipsis" FontSize="10" Opacity="0.6" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+        <StackPanel Grid.Row="2" Spacing="8" Margin="12,0">
+          <TextBlock Text="{local:Text ThemeLabel}" FontSize="12" Opacity="0.65" />
+          <ComboBox x:Name="ThemeSelector" SelectedIndex="0" SelectionChanged="ThemeChanged"
+                    HorizontalAlignment="Stretch" AutomationProperties.Name="{local:Text ThemeLabel}">
+            <ComboBoxItem Content="{local:Text SystemTheme}" />
+            <ComboBoxItem Content="{local:Text LightTheme}" />
+            <ComboBoxItem Content="{local:Text DarkTheme}" />
+          </ComboBox>
+        </StackPanel>
+      </Grid>
+    </Border>
+    <ContentControl x:Name="PageHost" Grid.Column="1" HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch" />
+  </Grid>
+</Window>

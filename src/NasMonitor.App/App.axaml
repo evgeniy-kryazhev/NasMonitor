@@ -1,0 +1,11 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:semi="https://irihi.tech/semi"
+             x:Class="NasMonitor.App.App" RequestedThemeVariant="Default">
+  <Application.Styles>
+    <semi:SemiTheme Locale="ru-RU" />
+    <Style Selector="TextBlock">
+      <Setter Property="FontFamily" Value="Segoe UI, San Francisco, sans-serif" />
+    </Style>
+  </Application.Styles>
+</Application>
