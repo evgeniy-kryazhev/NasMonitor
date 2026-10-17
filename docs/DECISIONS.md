@@ -1,5 +1,36 @@
 # Решения desktop spike
 
+## 2026-10-17 — папки по ответственности во всех проектах
+
+По запросу пользователя структурируем App, Core, Hosting, Infrastructure,
+Synology provider, оба Platform-проекта и тесты. Вместо плоского набора файлов
+используем тематические папки и соответствующие пространства имён. Корень App
+оставляем для точки входа и Application; Views разделяем на Windows, Pages
+и Controls. XAML/code-behind, SmokeTests и NativeMethods остаются рядом
+с основным partial-классом. Это сохраняет навигацию и вложенность файлов в IDE.
+
+Альтернатива — оставить прежние namespaces при перемещении — уменьшает diff,
+но затрудняет поиск типов по их ответственности. Выбрана согласованная структура.
+Границы сборок, DI-lifetimes, JSON и идентификаторы системного хранилища
+не меняются. После переноса проверяем compiled XAML, ресурс RU, unit-тесты
+и Windows UI smoke. macOS остаётся Unverified.
+
+## 2026-10-17 — полный рефакторинг и воспроизводимый стиль ReSharper
+
+По запросу пользователя сверяем актуальную документацию JetBrains ReSharper
+2026.2. Стиль задаём в .editorconfig, CLI закрепляем локальным tool manifest.
+Единого обязательного JetBrains style guide нет: выбранные правила команды
+дополняют базовые .NET conventions. Сохраняем читаемые блоки, Allman braces,
+file-scoped namespaces и camelCase private fields (совместимо с MVVM generators).
+Разделяем production logic, DI, UI smoke, native declarations и типы контрактов.
+Названия SpikeViewModel/SpikeStorage заменяем на WidgetViewModel/WidgetSettingsStore;
+существующие пути настроек/JSON-схемы и OS-credential identifiers сохраняем.
+Не меняем протокол DSM, desktop-level host, приоритеты тем и политику TLS.
+
+Дополнительный запрос: штатный Avalonia ColorPicker той же версии 11.3.22,
+синхронизированный с HEX-полем и draft preview. Используем готовую тему пикера,
+не заменяя Semi.Avalonia для остальных контролов.
+
 ## 2026-10-17 — растягиваемая рабочая область
 
 Уточнение пользователя: полоса прокрутки должна находиться у правой границы

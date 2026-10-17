@@ -1,5 +1,29 @@
 # Архитектура NAS Monitor
 
+## Текущая организация файлов
+
+Папки соответствуют пространствам имён. Точки входа `App.axaml`,
+`App.axaml.cs` и `Program.cs` остаются в корне App. Пары XAML/code-behind,
+partial-файлы SmokeTests и NativeMethods находятся рядом с основными классами.
+
+| Проект | Папки и назначение |
+| --- | --- |
+| NasMonitor.App | Composition — DI; Localization — RU-ресурс и markup extension; Models; ViewModels; Services — управление виджетом; Persistence — настройки; Views/Windows, Views/Pages, Views/Controls |
+| NasMonitor.Core | Connections — проверки подключения; Profiles — профиль NAS; Security — контракт секретов; Monitoring — метрики и сессии; Widgets — внешний вид и геометрия; Diagnostics — synthetic sample |
+| NasMonitor.Hosting | Abstractions — desktop host/pointer interfaces; Models — native handles, bounds и результаты |
+| NasMonitor.Infrastructure | Monitoring — общий опрос; Profiles — операции с профилями; Persistence — JSON repository |
+| NasMonitor.Providers.Synology | Connections — проверка DSM; Monitoring — сессия и нормализация метрик; Protocol — DSM JSON/HTTP; Transport — DNS/TCP/TLS |
+| NasMonitor.Platform.Windows | Desktop — WorkerW host; Security — Credential Manager |
+| NasMonitor.Platform.MacOS | Desktop — AppKit host; Security — Keychain |
+| NasMonitor.Core.Tests | Widgets — внешний вид, цвет, геометрия и жесты |
+| NasMonitor.Connection.Tests | Connections, Monitoring, Profiles, Persistence — тесты соответствующих функций |
+
+Локализация загружается из `NasMonitor.App.Localization.Strings`.
+Перенос не меняет формат сохранённых данных, их каталоги и OS credential IDs.
+Структурирование: Implemented / Automated-tested — Release build без предупреждений,
+80 unit-тестов и Windows UI smoke проходят после переноса. RU-тексты и страницы
+проверены по снимкам smoke. macOS и реальное подключение DSM после переноса — Unverified.
+
 ## Реализованный срез desktop spike
 
 `NasMonitor.slnx`: Core (геометрия/синтетические samples), Hosting (контракт без UI),
@@ -42,14 +66,14 @@ Utilization опрашивается каждые 10 секунд после з�
 
 WidgetMonitoringPresenter переводит события на UI dispatcher, синхронизирует
 список источников и сохраняет выбранный ID в DesktopSpike/source.json.
-SpikeViewModel теперь показывает реальные данные; synthetic stream включается
+WidgetViewModel теперь показывает реальные данные; synthetic stream включается
 только флагом smoke. Окна и предпросмотр не создают polling-loop.
 WidgetContentView измеряет тот же контент для минимальной высоты desktop-окна;
 native host получает max(запрошенная высота, контент) с ограничением рабочей областью.
 Размер можно увеличивать вручную; старое поле AutoHeight игнорируется.
 WidgetSettingsView разделён на вкладки внешности и расположения; источник NAS общий.
 
-## Модули
+## Целевая структура модулей следующих этапов
 ```
 NasMonitor.sln
 src/

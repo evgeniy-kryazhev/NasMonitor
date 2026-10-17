@@ -4,6 +4,7 @@
              x:Class="NasMonitor.App.App" RequestedThemeVariant="Default">
   <Application.Styles>
     <semi:SemiTheme Locale="ru-RU" />
+    <semi:ColorPickerSemiTheme />
     <Style Selector="TextBlock">
       <Setter Property="FontFamily" Value="Segoe UI, San Francisco, sans-serif" />
     </Style>

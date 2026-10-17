@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="ManagerTitle">
+    <value>NAS Monitor · Desktop spike</value>
+  </data>
+  <data name="ApplicationTitle">
+    <value>NAS Monitor</value>
+  </data>
+  <data name="DemoDescription">
+    <value>Desktop spike · синтетические метрики · без DSM</value>
+  </data>
+  <data name="AcceptanceReminder">
+    <value>Успех native API ещё не подтверждает desktop-поведение. Проверьте чек-лист на каждой ОС.</value>
+  </data>
+  <data name="PhysicalPositionX">
+    <value>X · физические px</value>
+  </data>
+  <data name="PhysicalPositionY">
+    <value>Y · физические px</value>
+  </data>
+  <data name="LogicalWidth">
+    <value>Ширина · DIP</value>
+  </data>
+  <data name="LogicalHeight">
+    <value>Высота · DIP</value>
+  </data>
+  <data name="LockWidget">
+    <value>Зафиксировать · locked</value>
+  </data>
+  <data name="ApplyAndSave">
+    <value>Применить и сохранить</value>
+  </data>
+  <data name="RetryHost">
+    <value>Повторить host</value>
+  </data>
+  <data name="ThemeLabel">
+    <value>Тема</value>
+  </data>
+  <data name="SystemTheme">
+    <value>Системная</value>
+  </data>
+  <data name="LightTheme">
+    <value>Светлая</value>
+  </data>
+  <data name="DarkTheme">
+    <value>Тёмная</value>
+  </data>
+  <data name="ManagerHelp">
+    <value>Нажмите «Перемещать виджет»: тяните за основную область для перемещения, за нижний правый уголок — для изменения размера. Положение и размер сохраняются при отпускании. «Завершить перемещение» фиксирует виджет. Закрытие Manager завершает приложение.</value>
+  </data>
+  <data name="ResizeHelp">
+    <value>Потяните за уголок, чтобы изменить размер виджета</value>
+  </data>
+  <data name="EnableDragMode">
+    <value>Перемещать виджет</value>
+  </data>
+  <data name="PointerFailed">
+    <value>Ввод рабочего стола недоступен. Используйте координаты или нажмите «Повторить host».</value>
+  </data>
+  <data name="FinishDragMode">
+    <value>Завершить перемещение</value>
+  </data>
+  <data name="WidgetTitle">
+    <value>NAS Monitor • Desktop spike</value>
+  </data>
+  <data name="DemoNasName">
+    <value>NAS · DEMO</value>
+  </data>
+  <data name="DemoStatus">
+    <value>● Тест</value>
+  </data>
+  <data name="CpuLabel">
+    <value>CPU</value>
+  </data>
+  <data name="RamLabel">
+    <value>RAM</value>
+  </data>
+  <data name="HostWaiting">
+    <value>Ожидание host</value>
+  </data>
+  <data name="LayoutSaved">
+    <value>Расположение сохранено</value>
+  </data>
+  <data name="LayoutSaveFailed">
+    <value>Не удалось сохранить расположение; см. spike.log</value>
+  </data>
+  <data name="HostApplied">
+    <value>Native API: применено · Unverified
+</value>
+  </data>
+  <data name="HostFailed">
+    <value>Desktop host: отказ · виджет скрыт
+</value>
+  </data>
+  <data name="LastUpdateFormat">
+    <value>Обновлено: {0}</value>
+  </data>
+  <data name="NasConnectionsTitle">
+    <value>Подключения Synology DSM</value>
+  </data>
+  <data name="NasProfiles">
+    <value>Мои NAS</value>
+  </data>
+  <data name="NasNew">
+    <value>Добавить NAS</value>
+  </data>
+  <data name="NasName">
+    <value>Название NAS</value>
+  </data>
+  <data name="NasEndpoint">
+    <value>Адрес: https://nas.example:5001</value>
+  </data>
+  <data name="NasExternalEndpoint">
+    <value>Внешний HTTPS-адрес (необязательно)</value>
+  </data>
+  <data name="NasUsername">
+    <value>Имя пользователя DSM</value>
+  </data>
+  <data name="NasPassword">
+    <value>Пароль (пусто — использовать сохранённый)</value>
+  </data>
+  <data name="NasOtp">
+    <value>Одноразовый код 2FA (если требуется)</value>
+  </data>
+  <data name="NasRememberPassword">
+    <value>Сохранить пароль в системном хранилище</value>
+  </data>
+  <data name="NasEnabled">
+    <value>Профиль включён</value>
+  </data>
+  <data name="NasUseExternal">
+    <value>Проверить внешний адрес вместо основного</value>
+  </data>
+  <data name="NasSave">
+    <value>Сохранить профиль</value>
+  </data>
+  <data name="NasTest">
+    <value>Проверить соединение</value>
+  </data>
+  <data name="NasCancel">
+    <value>Отмена</value>
+  </data>
+  <data name="NasDelete">
+    <value>Удалить профиль</value>
+  </data>
+  <data name="NasCapabilities">
+    <value>API, объявленные устройством</value>
+  </data>
+  <data name="NasReady">
+    <value>Добавьте NAS или выберите сохранённый профиль.</value>
+  </data>
+  <data name="NasConnectionHelp">
+    <value>Укажите полный HTTPS-адрес DSM с портом. Сохраните профиль, затем нажмите «Подключить виджет». Для автоматического входа после запуска сохраните пароль в системном хранилище. OTP и сессия не сохраняются. Внешний адрес выбирается явно. Проверка соединения выполняется отдельно и закрывает временную сессию.</value>
+  </data>
+  <data name="NasSaved">
+    <value>Профиль сохранён. Выберите «Подключить виджет»; при сохранённом пароле мониторинг запускается автоматически.</value>
+  </data>
+  <data name="NasDeleted">
+    <value>Профиль и его сохранённый пароль удалены.</value>
+  </data>
+  <data name="NasStorageFailed">
+    <value>Операция с профилями или системным хранилищем не завершена. Перечитайте список перед повтором; конфигурация могла сохраниться, даже если удаление старого пароля не удалось.</value>
+  </data>
+  <data name="NasInvalidProfile">
+    <value>Укажите название, пользователя и корректный HTTPS-адрес с портом, без пути, параметров или пароля в URL.</value>
+  </data>
+  <data name="NasChecking">
+    <value>Проверяем соединение…</value>
+  </data>
+  <data name="NasAuthenticated">
+    <value>Авторизация подтверждена. Результаты отдельных этапов — ниже. Права чтения метрик ещё не проверены.</value>
+  </data>
+  <data name="NasCheckFailed">
+    <value>Проверка не подтвердила авторизацию. Причина указана в этапах ниже.</value>
+  </data>
+  <data name="CheckPassed">
+    <value>Успешно</value>
+  </data>
+  <data name="CheckUnverified">
+    <value>Не проверено: наличие API не подтверждает права на метрики</value>
+  </data>
+  <data name="StageDns">
+    <value>DNS</value>
+  </data>
+  <data name="StageTcp">
+    <value>TCP</value>
+  </data>
+  <data name="StageTls">
+    <value>TLS / сертификат</value>
+  </data>
+  <data name="StageDiscovery">
+    <value>Обнаружение API</value>
+  </data>
+  <data name="StageAuthentication">
+    <value>Авторизация</value>
+  </data>
+  <data name="StageCapabilities">
+    <value>Доступные API</value>
+  </data>
+  <data name="StagePermissions">
+    <value>Права мониторинга</value>
+  </data>
+  <data name="StageLogout">
+    <value>Выход из сессии</value>
+  </data>
+  <data name="ErrorNone">
+    <value>Нет ошибки</value>
+  </data>
+  <data name="ErrorDisabled">
+    <value>Профиль отключён</value>
+  </data>
+  <data name="ErrorMissingPassword">
+    <value>Введите пароль или сохраните его в системном хранилище.</value>
+  </data>
+  <data name="ErrorDns">
+    <value>Не удалось определить адрес NAS.</value>
+  </data>
+  <data name="ErrorNetwork">
+    <value>NAS недоступен или соединение прервано.</value>
+  </data>
+  <data name="ErrorTimeout">
+    <value>Превышено время ожидания.</value>
+  </data>
+  <data name="ErrorTls">
+    <value>Не прошла проверка TLS или сертификата. Проверьте имя хоста, срок и доверие сертификату.</value>
+  </data>
+  <data name="ErrorHttp">
+    <value>DSM вернул HTTP-ошибку или перенаправление. Проверьте HTTPS-адрес и порт.</value>
+  </data>
+  <data name="ErrorInvalidResponse">
+    <value>Ответ не соответствует ожидаемому формату DSM.</value>
+  </data>
+  <data name="ErrorUnsupportedApi">
+    <value>Нужная версия API не поддерживается.</value>
+  </data>
+  <data name="ErrorInvalidCredentials">
+    <value>Неверное имя пользователя или пароль.</value>
+  </data>
+  <data name="ErrorAccountDisabled">
+    <value>Учётная запись отключена.</value>
+  </data>
+  <data name="ErrorPermissionDenied">
+    <value>Недостаточно прав.</value>
+  </data>
+  <data name="ErrorOtpRequired">
+    <value>Требуется одноразовый код 2FA. Введите код и повторите проверку.</value>
+  </data>
+  <data name="ErrorInvalidOtp">
+    <value>Неверный или просроченный код 2FA.</value>
+  </data>
+  <data name="ErrorBlockedIp">
+    <value>DSM заблокировал исходный IP. Проверьте настройки DSM.</value>
+  </data>
+  <data name="ErrorPasswordChangeRequired">
+    <value>Пароль просрочен или требует изменения через DSM.</value>
+  </data>
+  <data name="ErrorSessionExpired">
+    <value>Сессия истекла или была прервана.</value>
+  </data>
+  <data name="ErrorApiError">
+    <value>DSM не завершил запрос. Если не удался выход, сессия завершится по таймауту DSM.</value>
+  </data>
+  <data name="ErrorCancelled">
+    <value>Проверка отменена.</value>
+  </data>
+  <data name="WidgetSettingsTitle">
+    <value>Настройка виджета</value>
+  </data>
+  <data name="NavigationCaption">
+    <value>Рабочий стол и NAS</value>
+  </data>
+  <data name="NavigationLabel">
+    <value>Разделы приложения</value>
+  </data>
+  <data name="NavigationWidget">
+    <value>Виджет</value>
+  </data>
+  <data name="NavigationConnections">
+    <value>Подключения DSM</value>
+  </data>
+  <data name="AppearanceTitle">
+    <value>Внешний вид</value>
+  </data>
+  <data name="AppearanceName">
+    <value>Название на виджете</value>
+  </data>
+  <data name="AppearanceAccent">
+    <value>Акцент · #RRGGBB</value>
+  </data>
+  <data name="AppearanceTheme">
+    <value>Тема виджета</value>
+  </data>
+  <data name="AppearanceFollowApplication">
+    <value>Как в приложении</value>
+  </data>
+  <data name="AppearanceOpacity">
+    <value>Непрозрачность · %</value>
+  </data>
+  <data name="AppearanceCorners">
+    <value>Скругление · DIP</value>
+  </data>
+  <data name="AppearanceShowUpdate">
+    <value>Время обновления</value>
+  </data>
+  <data name="AppearancePreview">
+    <value>Предпросмотр</value>
+  </data>
+  <data name="AppearancePreviewHelp">
+    <value>Изменения видны сразу. «Применить внешний вид» сохранит настройки и обновит виджет на рабочем столе.</value>
+  </data>
+  <data name="AppearanceApply">
+    <value>Применить внешний вид</value>
+  </data>
+  <data name="AppearanceReset">
+    <value>Сбросить внешний вид</value>
+  </data>
+  <data name="AppearanceInvalidColor">
+    <value>Введите цвет в формате #RRGGBB, например #35B89A.</value>
+  </data>
+  <data name="AppearanceSaved">
+    <value>Внешний вид сохранён</value>
+  </data>
+  <data name="PlacementTitle">
+    <value>Расположение и размер</value>
+  </data>
+  <data name="DesktopDiagnostics">
+    <value>Состояние рабочего стола</value>
+  </data>
+  <data name="SidebarNasTitle">
+    <value>МОИ NAS</value>
+  </data>
+  <data name="MonitorConnect">
+    <value>Подключить виджет</value>
+  </data>
+  <data name="MonitorSource">
+    <value>Источник данных виджета</value>
+  </data>
+  <data name="MonitorSaveFirst">
+    <value>Сначала сохраните изменения профиля, затем подключите виджет.</value>
+  </data>
+  <data name="MonitorNoSource">
+    <value>Нет NAS</value>
+  </data>
+  <data name="MonitorConnecting">
+    <value>Подключение…</value>
+  </data>
+  <data name="MonitorOnline">
+    <value>В сети</value>
+  </data>
+  <data name="MonitorDegraded">
+    <value>Частично</value>
+  </data>
+  <data name="MonitorOffline">
+    <value>Нет связи</value>
+  </data>
+  <data name="MonitorAuthenticationRequired">
+    <value>Нужен вход</value>
+  </data>
+  <data name="MonitorPermissionDenied">
+    <value>Нет прав</value>
+  </data>
+  <data name="MonitorUnsupported">
+    <value>Нет API</value>
+  </data>
+  <data name="MonitorDisabled">
+    <value>Отключён</value>
+  </data>
+  <data name="MonitorStopped">
+    <value>Остановлен</value>
+  </data>
+  <data name="MonitorStale">
+    <value>Устарело</value>
+  </data>
+  <data name="MonitorRefresh">
+    <value>Обновить метрики</value>
+  </data>
+  <data name="MetricAvailable">
+    <value>Данные получены от DSM.</value>
+  </data>
+  <data name="MetricUnavailable">
+    <value>DSM не предоставил показатель.</value>
+  </data>
+  <data name="MetricInvalid">
+    <value>DSM вернул неизвестный формат или недопустимое значение.</value>
+  </data>
+  <data name="MetricPermissionDenied">
+    <value>У учётной записи нет прав на этот показатель.</value>
+  </data>
+  <data name="MetricUnsupported">
+    <value>Нужный API или его версия не поддерживается.</value>
+  </data>
+  <data name="MetricStale">
+    <value>Данные устарели. Ожидается успешное обновление.</value>
+  </data>
+  <data name="LastSuccessFormat">
+    <value>Последние данные: {0}</value>
+  </data>
+  <data name="StorageLabel">
+    <value>Хранилище</value>
+  </data>
+  <data name="NetworkLabel">
+    <value>Сеть</value>
+  </data>
+  <data name="DownloadLabel">
+    <value>Сеть ↓</value>
+  </data>
+  <data name="UploadLabel">
+    <value>Сеть ↑</value>
+  </data>
+  <data name="TemperatureLabel">
+    <value>Температура</value>
+  </data>
+  <data name="UptimeLabel">
+    <value>Время работы</value>
+  </data>
+  <data name="UptimeDays">
+    <value>дн.</value>
+  </data>
+  <data name="UptimeHours">
+    <value>ч</value>
+  </data>
+  <data name="UptimeMinutes">
+    <value>мин</value>
+  </data>
+  <data name="WidgetHeightHelp">
+    <value>Высота изменяется вручную. Минимальная высота определяется видимым содержимым, чтобы показатели не обрезались.</value>
+  </data>
+  <data name="PlacementTab">
+    <value>Расположение</value>
+  </data>
+  <data name="MonitorChooseSource">
+    <value>Выберите сохранённый NAS</value>
+  </data>
+  <data name="MonitorPartialHelp">
+    <value>Часть показателей недоступна. Наведите указатель на показатель в предпросмотре, чтобы узнать причину.</value>
+  </data>
+</root>

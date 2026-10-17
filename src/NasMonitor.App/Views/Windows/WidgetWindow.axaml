@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:viewModels="using:NasMonitor.App.ViewModels"
+        xmlns:controls="using:NasMonitor.App.Views.Controls"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:NasMonitor.App.Localization"
+        x:Class="NasMonitor.App.Views.Windows.WidgetWindow" x:DataType="viewModels:WidgetViewModel"
+        Title="{local:Text WidgetTitle}" Width="300" Height="210"
+        SystemDecorations="None" ShowInTaskbar="False" ShowActivated="False"
+        CanResize="False" Opacity="0" Background="Transparent" TransparencyLevelHint="Transparent">
+  <Grid>
+    <controls:WidgetContentView x:Name="WidgetContent" />
+    <Border Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+            Background="Transparent" Cursor="BottomRightCorner" IsVisible="{Binding IsEditing}"
+            ToolTip.Tip="{local:Text ResizeHelp}" AutomationProperties.Name="{local:Text ResizeHelp}">
+      <Path Data="M 4,20 L 20,4 M 11,20 L 20,11 M 18,20 L 20,18"
+            Stroke="{DynamicResource SemiColorText2}" StrokeThickness="1.5"
+            Margin="0,0,3,3" />
+    </Border>
+  </Grid>
+</Window>

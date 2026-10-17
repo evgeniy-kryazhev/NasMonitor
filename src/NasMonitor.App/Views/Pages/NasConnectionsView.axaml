@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:viewModels="using:NasMonitor.App.ViewModels"
+        xmlns:models="using:NasMonitor.App.Models"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:NasMonitor.App.Localization"
+        x:Class="NasMonitor.App.Views.Pages.NasConnectionsView" x:DataType="viewModels:NasConnectionsViewModel">
+  <Grid x:Name="PageContent" Margin="28" RowDefinitions="*,Auto">
+    <ScrollViewer x:Name="FormScroll" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="12">
+        <TextBlock Text="{local:Text NasConnectionsTitle}" FontSize="26" FontWeight="SemiBold" />
+        <TextBlock Text="{local:Text NasConnectionHelp}" TextWrapping="Wrap" Opacity="0.7" />
+        <StackPanel Spacing="8" IsEnabled="{Binding CanEdit}">
+          <TextBox Watermark="{local:Text NasName}" Text="{Binding ProfileName, Mode=TwoWay}" MaxLength="100"
+                   AutomationProperties.Name="{local:Text NasName}" />
+          <TextBox Watermark="{local:Text NasEndpoint}" Text="{Binding Endpoint, Mode=TwoWay}" MaxLength="2048"
+                   AutomationProperties.Name="{local:Text NasEndpoint}" />
+          <TextBox Watermark="{local:Text NasExternalEndpoint}" Text="{Binding ExternalEndpoint, Mode=TwoWay}" MaxLength="2048"
+                   AutomationProperties.Name="{local:Text NasExternalEndpoint}" />
+          <TextBox Watermark="{local:Text NasUsername}" Text="{Binding Username, Mode=TwoWay}" MaxLength="256"
+                   AutomationProperties.Name="{local:Text NasUsername}" />
+          <TextBox Watermark="{local:Text NasPassword}" Text="{Binding Password, Mode=TwoWay}" PasswordChar="●" MaxLength="1280"
+                   AutomationProperties.Name="{local:Text NasPassword}" />
+          <TextBox Watermark="{local:Text NasOtp}" Text="{Binding Otp, Mode=TwoWay}" PasswordChar="●" MaxLength="32"
+                   AutomationProperties.Name="{local:Text NasOtp}" />
+          <CheckBox Content="{local:Text NasRememberPassword}" IsChecked="{Binding RememberPassword, Mode=TwoWay}" />
+          <CheckBox Content="{local:Text NasEnabled}" IsChecked="{Binding Enabled, Mode=TwoWay}" />
+          <CheckBox Content="{local:Text NasUseExternal}" IsChecked="{Binding UseExternalEndpoint, Mode=TwoWay}" />
+        </StackPanel>
+        <WrapPanel>
+          <Button Content="{local:Text MonitorConnect}" Command="{Binding ConnectMonitorCommand}" Margin="0,0,8,8" />
+          <Button Content="{local:Text NasSave}" Command="{Binding SaveProfileCommand}" Margin="0,0,8,8" />
+          <Button Content="{local:Text NasTest}" Command="{Binding TestConnectionCommand}" Margin="0,0,8,8" />
+          <Button Content="{local:Text NasCancel}" Command="{Binding TestConnectionCancelCommand}" Margin="0,0,8,8" />
+          <Button Content="{local:Text NasCancel}" Command="{Binding ConnectMonitorCancelCommand}" Margin="0,0,8,8"
+                  IsVisible="{Binding ConnectMonitorCommand.IsRunning}" />
+          <Button Content="{local:Text NasDelete}" Command="{Binding DeleteProfileCommand}" Margin="0,0,0,8" />
+        </WrapPanel>
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3" />
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontWeight="SemiBold" />
+        <ItemsControl ItemsSource="{Binding Checks}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:ConnectionCheckRow">
+              <Grid ColumnDefinitions="150,*" Margin="0,4">
+                <TextBlock Text="{Binding Stage}" />
+                <TextBlock Grid.Column="1" Text="{Binding Detail}" TextWrapping="Wrap" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="{local:Text NasCapabilities}" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding CapabilitySummary}" TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
+      </StackPanel>
+    </ScrollViewer>
+    <Button x:Name="AddNasButton" Grid.Row="1" HorizontalAlignment="Right"
+            Content="{local:Text NasNew}" Command="{Binding NewProfileCommand}" Margin="0,16,0,0" />
+  </Grid>
+</UserControl>
