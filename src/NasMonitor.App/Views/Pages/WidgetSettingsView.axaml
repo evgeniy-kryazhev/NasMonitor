@@ -1,4 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:services="using:NasMonitor.App.Services"
+        xmlns:models="using:NasMonitor.App.Models"
         xmlns:viewModels="using:NasMonitor.App.ViewModels"
         xmlns:controls="using:NasMonitor.App.Views.Controls"
         xmlns:profiles="using:NasMonitor.Core.Profiles"
@@ -8,18 +10,44 @@
   <Grid x:Name="PageContent" Margin="28,28,0,0" RowDefinitions="Auto,*">
     <StackPanel x:Name="HeaderContent" Spacing="12" Margin="0,0,28,0">
       <TextBlock Text="{local:Text WidgetSettingsTitle}" FontSize="28" FontWeight="SemiBold" />
-      <TextBlock Text="{local:Text MonitorSource}" />
-      <ComboBox ItemsSource="{Binding AvailableNas}" SelectedItem="{Binding SelectedNas, Mode=TwoWay}"
-                PlaceholderText="{local:Text MonitorChooseSource}" HorizontalAlignment="Stretch"
-                AutomationProperties.Name="{local:Text MonitorSource}">
-        <ComboBox.ItemTemplate>
-          <DataTemplate x:DataType="profiles:NasProfile">
-            <TextBlock Text="{Binding Name}" />
-          </DataTemplate>
-        </ComboBox.ItemTemplate>
-      </ComboBox>
-      <Button Content="{local:Text MonitorRefresh}" Command="{Binding RefreshMetricsCommand}" HorizontalAlignment="Left" />
-      <TextBlock Text="{Binding MonitorDetail}" IsVisible="{Binding HasMonitorDetail}" TextWrapping="Wrap" Opacity="0.65" />
+      <StackPanel x:Name="WidgetManagement" x:DataType="services:WidgetWorkspace" Spacing="8">
+        <TextBlock Text="{local:Text WidgetSelection}" />
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <ComboBox ItemsSource="{Binding Widgets}" SelectedItem="{Binding SelectedWidget, Mode=TwoWay}"
+                    IsEnabled="{Binding CanEdit}" HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="{local:Text WidgetSelection}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="models:WidgetInstance">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <TextBlock Text="{Binding ViewModel.WidgetTitle}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding ViewModel.SelectedNas.Name}" Opacity="0.6" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="{local:Text WidgetCreate}" Command="{Binding CreateWidgetCommand}" />
+            <Button Content="{local:Text WidgetDelete}" Command="{Binding DeleteWidgetCommand}"
+                    ToolTip.Tip="{local:Text WidgetDeleteHelp}" />
+          </StackPanel>
+        </Grid>
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" />
+      </StackPanel>
+      <StackPanel x:Name="SourceControls" Spacing="12">
+        <TextBlock Text="{local:Text MonitorSource}" />
+        <ComboBox x:Name="SourceSelector" ItemsSource="{Binding AvailableNas}" SelectedItem="{Binding SelectedNas, Mode=OneWay}"
+                  SelectionChanged="SourceSelectionChanged"
+                  PlaceholderText="{local:Text MonitorChooseSource}" HorizontalAlignment="Stretch"
+                  AutomationProperties.Name="{local:Text MonitorSource}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="profiles:NasProfile">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <Button Content="{local:Text MonitorRefresh}" Command="{Binding RefreshMetricsCommand}" HorizontalAlignment="Left" />
+        <TextBlock Text="{Binding MonitorDetail}" IsVisible="{Binding HasMonitorDetail}" TextWrapping="Wrap" Opacity="0.65" />
+      </StackPanel>
     </StackPanel>
     <TabControl x:Name="SettingsTabs" Grid.Row="1" Margin="0,20,0,0"
                 HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">

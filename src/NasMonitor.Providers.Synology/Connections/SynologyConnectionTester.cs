@@ -2,11 +2,11 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using static NasMonitor.Providers.Synology.Protocol.DsmProtocol;
 using NasMonitor.Core.Connections;
 using NasMonitor.Core.Profiles;
 using NasMonitor.Providers.Synology.Protocol;
 using NasMonitor.Providers.Synology.Transport;
+using static NasMonitor.Providers.Synology.Protocol.DsmProtocol;
 
 namespace NasMonitor.Providers.Synology.Connections;
 

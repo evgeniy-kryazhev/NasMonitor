@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
+using NasMonitor.App.Models;
 using NasMonitor.App.ViewModels;
 using NasMonitor.Core.Profiles;
 using NasMonitor.Core.Widgets;
@@ -24,6 +25,11 @@ public partial class ManagerWindow
         }
 
         await VerifySidebarNasAsync();
+        if (workspace is not null)
+        {
+            await workspace.VerifyMultipleWidgetsAsync(VerifyWidgetEditingAsync);
+        }
+
         foreach (ThemeVariant theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
             ThemeSelector.SelectedIndex = theme == ThemeVariant.Light ? 1 : 2;
@@ -102,6 +108,50 @@ public partial class ManagerWindow
             Width = originalWidth;
             Height = originalHeight;
         }
+    }
+
+    private Task VerifyWidgetEditingAsync()
+    {
+        if (workspace is null || workspace.Widgets.Count < 2)
+        {
+            throw new InvalidOperationException("widgets.editor-unavailable");
+        }
+
+        WidgetInstance first = workspace.Widgets[0];
+        WidgetInstance second = workspace.Widgets[1];
+        Guid? firstNas = first.ViewModel.SelectedNas?.Id;
+        Guid? secondNas = second.ViewModel.SelectedNas?.Id;
+        workspace.SelectedWidget = first;
+        widgetSettings.DisplayAppearance(first.ViewModel.CurrentAppearance with { Title = "Primary draft" });
+        workspace.SelectedWidget = second;
+        widgetSettings.VerifySourceForSmoke(secondNas);
+        widgetSettings.DisplayAppearance(second.ViewModel.CurrentAppearance with { Title = "Backup draft" });
+        workspace.SelectedWidget = first;
+        widgetSettings.VerifySourceForSmoke(firstNas);
+        if (!ReferenceEquals(widgetSettings.DataContext, first.ViewModel) ||
+            widgetSettings.CaptureAppearanceDraft().Title != "Primary draft")
+        {
+            throw new InvalidOperationException("widgets.first-draft-lost");
+        }
+
+        workspace.SelectedWidget = second;
+        if (widgetSettings.CaptureAppearanceDraft().Title != "Backup draft")
+        {
+            throw new InvalidOperationException("widgets.second-draft-lost");
+        }
+
+        NasProfile selected = second.ViewModel.SelectedNas!;
+        widgetSettings.SelectNasForSmoke(first.ViewModel.SelectedNas!);
+        if (second.ViewModel.SelectedNas?.Id != firstNas || first.ViewModel.SelectedNas?.Id != firstNas)
+        {
+            throw new InvalidOperationException("widgets.source-control-failed");
+        }
+
+        widgetSettings.SelectNasForSmoke(selected);
+        widgetSettings.DisplayAppearance(second.ViewModel.CurrentAppearance);
+        workspace.SelectedWidget = first;
+        widgetSettings.DisplayAppearance(first.ViewModel.CurrentAppearance);
+        return Task.CompletedTask;
     }
 
     private void SaveSmokeImage(string path)

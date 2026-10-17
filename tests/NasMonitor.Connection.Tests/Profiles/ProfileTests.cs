@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NasMonitor.App.Persistence;
 using NasMonitor.App.Services;
 using NasMonitor.App.ViewModels;
 using NasMonitor.Core.Connections;
@@ -158,10 +157,7 @@ public sealed class ProfileTests
         var service = new NasProfileService(repository, new MemorySecrets());
         await using var coordinator =
             new NasMonitoringCoordinator(new UnusedSessionFactory(), service, TimeProvider.System);
-        using var presenter = new WidgetMonitoringPresenter(coordinator,
-            new WidgetSettingsStore(Path.GetDirectoryName(FilePath)!),
-            new WidgetViewModel(),
-            false);
+        using var presenter = new WidgetMonitoringPresenter(coordinator, false);
         using var viewModel = new NasConnectionsViewModel(service, new UnusedTester(), presenter)
         {
             ProfileName = "Draft profile",

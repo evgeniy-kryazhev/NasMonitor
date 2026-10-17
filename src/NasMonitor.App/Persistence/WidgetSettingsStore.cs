@@ -25,6 +25,55 @@ public sealed class WidgetSettingsStore
         this.directory = directory;
     }
 
+    /// <summary>Create an isolated settings scope without changing legacy filenames.</summary>
+    public WidgetSettingsStore ForWidget(Guid widgetId)
+    {
+        if (widgetId == Guid.Empty)
+        {
+            throw new ArgumentException("widget.invalid-id", nameof(widgetId));
+        }
+
+        return new WidgetSettingsStore(Path.Combine(directory, "widgets", widgetId.ToString("N")));
+    }
+
+    /// <summary>Read the catalog; a missing file means a legacy single-widget installation.</summary>
+    public async Task<WidgetCatalog?> LoadCatalogAsync(CancellationToken cancellationToken)
+    {
+        string path = Path.Combine(directory, "widgets.json");
+        try
+        {
+            string json = await File.ReadAllTextAsync(path, cancellationToken);
+            WidgetCatalog? catalog = JsonSerializer.Deserialize<WidgetCatalog>(json);
+            if (catalog is null || catalog.SchemaVersion != 1 || catalog.Widgets is null ||
+                catalog.Widgets.Count == 0 || catalog.Widgets.Any(entry => entry is null || entry.Id == Guid.Empty) ||
+                catalog.Widgets.Select(entry => entry.Id).Distinct().Count() != catalog.Widgets.Count ||
+                catalog.Widgets.Count(entry => entry.UsesLegacySettings) > 1)
+            {
+                throw new InvalidDataException("widgets.catalog-invalid");
+            }
+
+            return catalog;
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return null;
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException("widgets.catalog-invalid", exception);
+        }
+    }
+
+    /// <summary>Atomically save catalog membership and the selected widget.</summary>
+    public Task<bool> SaveCatalogAsync(WidgetCatalog catalog, CancellationToken cancellationToken)
+    {
+        return SaveDocumentAsync("widgets.json", catalog, cancellationToken);
+    }
+
     /// <summary>Read the widget's saved NAS identifier without credentials.</summary>
     public async Task<Guid?> LoadNasSelectionAsync(CancellationToken cancellationToken)
     {

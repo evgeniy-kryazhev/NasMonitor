@@ -12,9 +12,10 @@ using NasMonitor.Hosting.Models;
 
 namespace NasMonitor.App.Services;
 
-/// <summary>Owns one shared synthetic stream and the native widget lifecycle.</summary>
+/// <summary>Owns one widget window, its geometry, pointer gestures, and native lifecycle.</summary>
 public sealed partial class WidgetController : IDisposable
 {
+    private readonly WidgetGestureCoordinator gestures;
     private readonly IDesktopWidgetHost host;
     private readonly CancellationTokenSource lifetime = new();
     private readonly WidgetMonitoringPresenter monitoring;
@@ -27,7 +28,6 @@ public sealed partial class WidgetController : IDisposable
     private WidgetDragSession? dragSession;
     private double lastAppliedScale;
     private string lastHostCode = "";
-    private WidgetLayout layout = new();
     private ManagerWindow? manager;
     private NativeWidget? nativeWidget;
     private bool pointerWasPressed;
@@ -39,7 +39,8 @@ public sealed partial class WidgetController : IDisposable
     public WidgetController(IDesktopWidgetHost host,
         WidgetSettingsStore storage,
         WidgetViewModel viewModel,
-        WidgetMonitoringPresenter monitoring)
+        WidgetMonitoringPresenter monitoring,
+        WidgetGestureCoordinator gestures)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(storage);
@@ -48,9 +49,16 @@ public sealed partial class WidgetController : IDisposable
         this.storage = storage;
         this.viewModel = viewModel;
         this.monitoring = monitoring;
+        this.gestures = gestures;
         timer.Tick += OnTick;
         pointerTimer.Tick += OnPointerTick;
     }
+
+    internal WidgetLayout CurrentLayout
+    {
+        get;
+        private set;
+    } = new();
 
     private bool HasPointerGesture => dragSession is not null || resizeSession is not null;
 
@@ -63,6 +71,7 @@ public sealed partial class WidgetController : IDisposable
         }
 
         disposed = true;
+        gestures.Release(this);
         timer.Stop();
         timer.Tick -= OnTick;
         pointerTimer.Stop();
@@ -87,10 +96,10 @@ public sealed partial class WidgetController : IDisposable
         manager = managerWindow;
         try
         {
-            layout = await storage.LoadAsync(lifetime.Token);
+            CurrentLayout = await storage.LoadAsync(lifetime.Token);
             WidgetAppearance appearance = await storage.LoadAppearanceAsync(lifetime.Token);
             viewModel.ApplyAppearance(appearance);
-            manager.DisplayAppearance(appearance);
+            manager.DisplayAppearance(this, appearance);
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
         {
@@ -102,15 +111,15 @@ public sealed partial class WidgetController : IDisposable
             return;
         }
 
-        layout = FitLayout(layout);
-        manager.DisplayLayout(layout);
+        CurrentLayout = FitLayout(CurrentLayout);
+        manager.DisplayLayout(this, CurrentLayout);
         if (demoMode)
         {
             viewModel.Update(DemoSnapshot.Create(tick, DateTimeOffset.UtcNow));
         }
         else
         {
-            monitoring.Refresh();
+            monitoring.Refresh(viewModel);
         }
 
         Restore();
@@ -126,10 +135,10 @@ public sealed partial class WidgetController : IDisposable
         }
 
         widget?.EndDrag();
-        layout = FitLayout(requestedLayout);
-        manager?.DisplayLayout(layout);
+        CurrentLayout = FitLayout(requestedLayout);
+        manager?.DisplayLayout(this, CurrentLayout);
         Restore();
-        await SaveLayoutAsync(layout);
+        await SaveLayoutAsync(CurrentLayout);
     }
 
     private async Task SaveLayoutAsync(WidgetLayout savedLayout)
@@ -154,7 +163,7 @@ public sealed partial class WidgetController : IDisposable
 
         WidgetAppearance appearance = requested.Normalize();
         viewModel.ApplyAppearance(appearance);
-        manager?.DisplayAppearance(appearance);
+        manager?.DisplayAppearance(this, appearance);
         Restore();
         try
         {
@@ -173,19 +182,24 @@ public sealed partial class WidgetController : IDisposable
             return false;
         }
 
-        if (disposed || layout.Locked || HasPointerGesture || !IsHostAlive())
+        if (disposed || CurrentLayout.Locked || HasPointerGesture || !IsHostAlive())
+        {
+            return false;
+        }
+
+        if (!gestures.TryAcquire(this))
         {
             return false;
         }
 
         double scale = CurrentScale();
-        if (WidgetResizeSession.IsOverGrip(layout, pointer.X, pointer.Y, scale))
+        if (WidgetResizeSession.IsOverGrip(CurrentLayout, pointer.X, pointer.Y, scale))
         {
-            resizeSession = new WidgetResizeSession(layout, pointer.X, pointer.Y, scale);
+            resizeSession = new WidgetResizeSession(CurrentLayout, pointer.X, pointer.Y, scale);
         }
         else
         {
-            dragSession = new WidgetDragSession(layout, pointer.X, pointer.Y);
+            dragSession = new WidgetDragSession(CurrentLayout, pointer.X, pointer.Y);
         }
 
         return true;
@@ -193,7 +207,7 @@ public sealed partial class WidgetController : IDisposable
 
     internal void MoveDrag(PixelPoint pointer)
     {
-        if (disposed || layout.Locked || !HasPointerGesture || widget is null || nativeWidget is null)
+        if (disposed || CurrentLayout.Locked || !HasPointerGesture || widget is null || nativeWidget is null)
         {
             return;
         }
@@ -203,7 +217,7 @@ public sealed partial class WidgetController : IDisposable
             ? resizeSession.ResizeTo(pointer.X, pointer.Y, displays)
             : dragSession!.MoveTo(pointer.X, pointer.Y, displays);
         requested = FitContentHeight(requested);
-        if (requested == layout)
+        if (requested == CurrentLayout)
         {
             return;
         }
@@ -234,9 +248,9 @@ public sealed partial class WidgetController : IDisposable
                 return;
             }
 
-            layout = requested;
+            CurrentLayout = requested;
             lastAppliedScale = scale;
-            manager?.DisplayLayout(layout);
+            manager?.DisplayLayout(this, CurrentLayout);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
@@ -257,20 +271,21 @@ public sealed partial class WidgetController : IDisposable
 
         dragSession = null;
         resizeSession = null;
+        gestures.Release(this);
         if (!disposed)
         {
-            _ = SaveLayoutAsync(layout);
+            _ = SaveLayoutAsync(CurrentLayout);
         }
     }
 
     internal Task SetDragModeAsync(bool enabled)
     {
-        return ApplyAsync(layout with { Locked = !enabled });
+        return ApplyAsync(CurrentLayout with { Locked = !enabled });
     }
 
     private void OnPointerTick(object? sender, EventArgs args)
     {
-        if (disposed || layout.Locked || nativeWidget is null || widget?.IsVisible != true ||
+        if (disposed || CurrentLayout.Locked || nativeWidget is null || widget?.IsVisible != true ||
             host is not IDesktopPointerSource source)
         {
             return;
@@ -300,8 +315,9 @@ public sealed partial class WidgetController : IDisposable
             }
 
             double scale = CurrentScale();
-            bool inside = pointer.X >= layout.X && pointer.Y >= layout.Y &&
-                          pointer.X < layout.X + layout.Width * scale && pointer.Y < layout.Y + layout.Height * scale;
+            bool inside = pointer.X >= CurrentLayout.X && pointer.Y >= CurrentLayout.Y &&
+                          pointer.X < CurrentLayout.X + CurrentLayout.Width * scale &&
+                          pointer.Y < CurrentLayout.Y + CurrentLayout.Height * scale;
             if (newPress && inside && source.CanStartDrag(nativeWidget, pointer))
             {
                 BeginDrag(position, true);
@@ -334,9 +350,9 @@ public sealed partial class WidgetController : IDisposable
                 DestroyWidget();
                 widget = new WidgetWindow { DataContext = viewModel };
                 widget.SetController(this);
-                widget.Width = layout.Width;
-                widget.Height = layout.Height;
-                widget.Position = new PixelPoint(layout.X, layout.Y);
+                widget.Width = CurrentLayout.Width;
+                widget.Height = CurrentLayout.Height;
+                widget.Position = new PixelPoint(CurrentLayout.X, CurrentLayout.Y);
                 // Invisible until native placement succeeds: never present a floating fallback.
                 widget.Show();
                 IPlatformHandle? handle = widget.TryGetPlatformHandle();
@@ -356,25 +372,25 @@ public sealed partial class WidgetController : IDisposable
                 widget.Show();
             }
 
-            widget.Width = layout.Width;
-            layout = FitContentHeight(layout);
-            widget.Height = layout.Height;
-            widget.SetLocked(layout.Locked);
-            viewModel.IsEditing = !layout.Locked;
-            widget.Position = new PixelPoint(layout.X, layout.Y);
+            widget.Width = CurrentLayout.Width;
+            CurrentLayout = FitContentHeight(CurrentLayout);
+            widget.Height = CurrentLayout.Height;
+            widget.SetLocked(CurrentLayout.Locked);
+            viewModel.IsEditing = !CurrentLayout.Locked;
+            widget.Position = new PixelPoint(CurrentLayout.X, CurrentLayout.Y);
             double scale = CurrentScale();
-            var bounds = new NativeBounds(layout.X,
-                layout.Y,
-                (int)Math.Round(layout.Width * scale),
-                (int)Math.Round(layout.Height * scale));
-            DesktopAttachResult result = host.Attach(nativeWidget, bounds, layout.Locked, lifetime.Token);
-            manager.DisplayLayout(layout);
+            var bounds = new NativeBounds(CurrentLayout.X,
+                CurrentLayout.Y,
+                (int)Math.Round(CurrentLayout.Width * scale),
+                (int)Math.Round(CurrentLayout.Height * scale));
+            DesktopAttachResult result = host.Attach(nativeWidget, bounds, CurrentLayout.Locked, lifetime.Token);
+            manager.DisplayLayout(this, CurrentLayout);
             SetHostStatus(result);
             if (result.Success)
             {
                 widget.Opacity = 1;
                 lastAppliedScale = scale;
-                if (!layout.Locked && host is IDesktopPointerSource source)
+                if (!CurrentLayout.Locked && host is IDesktopPointerSource source)
                 {
                     pointerWasPressed = !source.TryReadPointer(out DesktopPointer pointer) || pointer.LeftButtonPressed;
                     pointerTimer.Start();
@@ -434,15 +450,15 @@ public sealed partial class WidgetController : IDisposable
         }
         else
         {
-            monitoring.Refresh();
+            monitoring.Refresh(viewModel);
         }
 
-        WidgetLayout fitted = FitLayout(layout);
-        bool changed = fitted != layout;
-        layout = fitted;
+        WidgetLayout fitted = FitLayout(CurrentLayout);
+        bool changed = fitted != CurrentLayout;
+        CurrentLayout = fitted;
         if (changed)
         {
-            manager?.DisplayLayout(layout);
+            manager?.DisplayLayout(this, CurrentLayout);
         }
 
         // Healthy windows are not hidden/repositioned on each metrics tick.
@@ -456,7 +472,7 @@ public sealed partial class WidgetController : IDisposable
 
     private double CurrentScale()
     {
-        return ScaleAt(layout);
+        return ScaleAt(CurrentLayout);
     }
 
     private double ScaleAt(WidgetLayout placement)

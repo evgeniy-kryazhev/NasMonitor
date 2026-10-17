@@ -446,4 +446,12 @@
   <data name="MonitorPartialHelp">
     <value>Часть показателей недоступна. Наведите указатель на показатель в предпросмотре, чтобы узнать причину.</value>
   </data>
+  <data name="WidgetSelection" xml:space="preserve"><value>Текущий виджет</value></data>
+  <data name="WidgetCreate" xml:space="preserve"><value>Создать виджет</value></data>
+  <data name="WidgetDelete" xml:space="preserve"><value>Удалить виджет</value></data>
+  <data name="WidgetDeleteHelp" xml:space="preserve"><value>Удаляется только виджет. Хотя бы один виджет должен остаться.</value></data>
+  <data name="WidgetNumber" xml:space="preserve"><value>Виджет {0}</value></data>
+  <data name="WidgetCreated" xml:space="preserve"><value>Виджет создан. Выберите для него NAS.</value></data>
+  <data name="WidgetDeleted" xml:space="preserve"><value>Виджет удалён. Профили NAS сохранены.</value></data>
+  <data name="WidgetsLoadFailed" xml:space="preserve"><value>Не удалось загрузить список виджетов. Проверьте доступ к настройкам и перезапустите приложение.</value></data>
 </root>

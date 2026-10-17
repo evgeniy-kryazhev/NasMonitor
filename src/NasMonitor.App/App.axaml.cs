@@ -31,15 +31,15 @@ public class App : Application
         {
             bool smokeMode = desktop.Args?.Contains("--smoke-test") == true;
             services = ApplicationServices.Create(smokeMode);
-            WidgetController controller = services.GetRequiredService<WidgetController>();
-            var manager = new ManagerWindow(controller,
-                services.GetRequiredService<WidgetViewModel>(),
+            WidgetWorkspace workspace = services.GetRequiredService<WidgetWorkspace>();
+            var manager = new ManagerWindow(workspace,
                 services.GetRequiredService<NasConnectionsViewModel>());
             desktop.MainWindow = manager;
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             manager.Opened += async (_, _) =>
             {
-                await controller.StartAsync(manager, smokeMode);
+                await workspace.StartAsync(manager);
+                int restoredWidgetCount = workspace.Widgets.Count;
                 if (smokeMode)
                 {
                     // Capture both real pages under both themes without contacting a NAS.
@@ -65,9 +65,19 @@ public class App : Application
                             {
                                 Directory.CreateDirectory("artifacts");
                                 File.WriteAllText("artifacts/smoke-report.json",
-                                    JsonSerializer.Serialize(controller.GetSmokeReport(),
+                                    JsonSerializer.Serialize(new
+                                        {
+                                            WidgetCount = workspace.Widgets.Count,
+                                            RestoredWidgetCount = restoredWidgetCount,
+                                            workspace.MultipleWidgetsVerified,
+                                            Widgets = workspace.Widgets
+                                                .Select(item => item.Controller.GetSmokeReport()).ToArray()
+                                        },
                                         new JsonSerializerOptions { WriteIndented = true }));
-                                exitCode = controller.IsSmokeHealthy ? 0 : 1;
+                                exitCode = workspace.Widgets.Count > 0 &&
+                                           workspace.Widgets.All(item => item.Controller.IsSmokeHealthy)
+                                    ? 0
+                                    : 1;
                             }
                             finally
                             {
@@ -79,7 +89,7 @@ public class App : Application
             };
             desktop.Exit += (_, _) =>
             {
-                controller.Dispose();
+                workspace.Dispose();
                 services.GetRequiredService<WidgetMonitoringPresenter>().Dispose();
                 services.DisposeAsync().AsTask().GetAwaiter().GetResult();
             };

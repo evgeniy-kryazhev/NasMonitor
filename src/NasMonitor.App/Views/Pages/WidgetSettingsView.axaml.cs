@@ -6,6 +6,7 @@ using Avalonia.Media;
 using NasMonitor.App.Localization;
 using NasMonitor.App.Services;
 using NasMonitor.App.ViewModels;
+using NasMonitor.Core.Profiles;
 using NasMonitor.Core.Widgets;
 
 namespace NasMonitor.App.Views.Pages;
@@ -17,6 +18,7 @@ public partial class WidgetSettingsView : UserControl, IDisposable
     private WidgetController? controller;
     private bool populatingAppearance;
     private WidgetViewModel? source;
+    private bool switchingWidget;
     private bool synchronizingAccentColor;
     private bool widgetLocked = true;
 
@@ -73,12 +75,46 @@ public partial class WidgetSettingsView : UserControl, IDisposable
 
     internal void Initialize(WidgetController widgetController, WidgetViewModel viewModel)
     {
+        switchingWidget = true;
+        Dispose();
         controller = widgetController;
+        SettingsTabs.IsEnabled = true;
+        SourceControls.IsEnabled = true;
         source = viewModel;
         source.PropertyChanged += SourceChanged;
         preview.RefreshRequested += RefreshSource;
         DataContext = viewModel;
         CopyMetrics();
+        switchingWidget = false;
+    }
+
+    private void SourceSelectionChanged(object? sender, SelectionChangedEventArgs args)
+    {
+        if (!switchingWidget && source is not null)
+        {
+            source.SelectedNas = SourceSelector.SelectedItem as NasProfile;
+        }
+    }
+
+    internal void InitializeWorkspace(WidgetWorkspace workspace)
+    {
+        WidgetManagement.DataContext = workspace;
+        SettingsTabs.IsEnabled = false;
+        SourceControls.IsEnabled = false;
+    }
+
+    internal void ClearWidget()
+    {
+        Dispose();
+        controller = null;
+        DataContext = null;
+        SettingsTabs.IsEnabled = false;
+        SourceControls.IsEnabled = false;
+    }
+
+    internal WidgetAppearance CaptureAppearanceDraft()
+    {
+        return ReadAppearance(preview.CurrentAppearance.AccentColor);
     }
 
     internal void DisplayLayout(WidgetLayout layout)

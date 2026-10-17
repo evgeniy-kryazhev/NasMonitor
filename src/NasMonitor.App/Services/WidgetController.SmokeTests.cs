@@ -27,16 +27,16 @@ public sealed partial class WidgetController
     internal async Task VerifyContentMinimumHeightAsync()
     {
         WidgetAppearance originalAppearance = viewModel.CurrentAppearance;
-        WidgetLayout originalLayout = layout;
+        WidgetLayout originalLayout = CurrentLayout;
         try
         {
-            layout = layout with { Height = 72 };
+            CurrentLayout = CurrentLayout with { Height = 72 };
             viewModel.ApplyAppearance(new WidgetAppearance());
             Restore();
             await Task.Delay(200);
             double expandedHeight = widget?.Height ?? 0;
             double enlargedHeight = Math.Min(600, expandedHeight + 80);
-            layout = layout with { Height = enlargedHeight };
+            CurrentLayout = CurrentLayout with { Height = enlargedHeight };
             Restore();
             await Task.Delay(200);
             if (Math.Abs((widget?.Height ?? 0) - enlargedHeight) > 1)
@@ -44,7 +44,7 @@ public sealed partial class WidgetController
                 throw new InvalidOperationException("widget.manual-height-not-preserved");
             }
 
-            layout = layout with { Height = 72 };
+            CurrentLayout = CurrentLayout with { Height = 72 };
             Restore();
             await Task.Delay(200);
             if (Math.Abs((widget?.Height ?? 0) - expandedHeight) > 1)
@@ -59,7 +59,7 @@ public sealed partial class WidgetController
                 ShowNetwork: false,
                 ShowTemperature: false,
                 ShowUptime: false));
-            layout = layout with { Height = 72 };
+            CurrentLayout = CurrentLayout with { Height = 72 };
             Restore();
             await Task.Delay(200);
             double compactHeight = widget?.Height ?? 0;
@@ -73,7 +73,7 @@ public sealed partial class WidgetController
         finally
         {
             viewModel.ApplyAppearance(originalAppearance);
-            layout = originalLayout;
+            CurrentLayout = originalLayout;
             Restore();
         }
     }

@@ -26,8 +26,9 @@ internal static class ApplicationServices
     internal static ServiceProvider Create(bool smokeMode)
     {
         var registrations = new ServiceCollection();
-        registrations.AddSingleton<WidgetSettingsStore>();
-        registrations.AddSingleton<WidgetViewModel>();
+        registrations.AddSingleton(_ => smokeMode
+            ? new WidgetSettingsStore(Path.GetFullPath("artifacts/smoke-settings"))
+            : new WidgetSettingsStore());
         registrations.AddSingleton<ISecretStore>(_ => OperatingSystem.IsWindows()
             ? new WindowsSecretStore()
             : OperatingSystem.IsMacOS()
@@ -50,8 +51,6 @@ internal static class ApplicationServices
         registrations.AddSingleton<NasMonitoringCoordinator>();
         registrations.AddSingleton(provider => new WidgetMonitoringPresenter(
             provider.GetRequiredService<NasMonitoringCoordinator>(),
-            provider.GetRequiredService<WidgetSettingsStore>(),
-            provider.GetRequiredService<WidgetViewModel>(),
             !smokeMode));
         registrations.AddSingleton<IDsmTransportProbe, DsmTransportProbe>();
         registrations.AddHttpClient<INasConnectionTester, SynologyConnectionTester>(client =>
@@ -67,7 +66,11 @@ internal static class ApplicationServices
             : OperatingSystem.IsMacOS()
                 ? new MacDesktopHost()
                 : new UnsupportedHost());
-        registrations.AddSingleton<WidgetController>();
+        registrations.AddSingleton(provider => new WidgetWorkspace(
+            provider.GetRequiredService<IDesktopWidgetHost>(),
+            provider.GetRequiredService<WidgetSettingsStore>(),
+            provider.GetRequiredService<WidgetMonitoringPresenter>(),
+            smokeMode));
         return registrations.BuildServiceProvider();
     }
 

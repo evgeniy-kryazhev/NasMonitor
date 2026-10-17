@@ -9,34 +9,32 @@ using NasMonitor.Infrastructure.Monitoring;
 
 namespace NasMonitor.App.Services;
 
-/// <summary>Projects shared monitor states onto UI state and persists the widget's selected NAS.</summary>
+/// <summary>Projects one shared NAS cache onto independently selected widget sources.</summary>
 public sealed class WidgetMonitoringPresenter : IDisposable
 {
-    private readonly CancellationTokenSource lifetime = new();
     private readonly NasMonitoringCoordinator monitoring;
     private readonly bool networkEnabled;
-    private readonly WidgetSettingsStore storage;
-    private readonly WidgetViewModel viewModel;
+    private readonly Dictionary<WidgetViewModel, Subscription> subscriptions = new();
     private bool disposed;
-    private bool initialized;
-    private bool synchronizing;
+    private IReadOnlyList<NasProfile> profiles = [];
 
-    /// <summary>Subscribe once for all widget/preview consumers.</summary>
-    public WidgetMonitoringPresenter(NasMonitoringCoordinator monitoring,
-        WidgetSettingsStore storage,
-        WidgetViewModel viewModel,
-        bool networkEnabled = true)
+    /// <summary>Subscribe to the shared coordinator without owning any NAS sessions.</summary>
+    public WidgetMonitoringPresenter(NasMonitoringCoordinator monitoring, bool networkEnabled = true)
     {
+        ArgumentNullException.ThrowIfNull(monitoring);
         this.monitoring = monitoring;
-        this.storage = storage;
-        this.viewModel = viewModel;
         this.networkEnabled = networkEnabled;
         monitoring.StateChanged += StateChanged;
-        viewModel.PropertyChanged += SelectionChanged;
-        viewModel.RefreshRequested += RefreshRequested;
     }
 
-    /// <summary>Release UI subscriptions before monitor shutdown.</summary>
+    /// <summary>The widget targeted by an explicit connection from the DSM page.</summary>
+    public WidgetViewModel? ActiveWidget
+    {
+        get;
+        set;
+    }
+
+    /// <summary>Release all UI subscriptions before the shared coordinator shuts down.</summary>
     public void Dispose()
     {
         if (disposed)
@@ -46,110 +44,239 @@ public sealed class WidgetMonitoringPresenter : IDisposable
 
         disposed = true;
         monitoring.StateChanged -= StateChanged;
-        viewModel.PropertyChanged -= SelectionChanged;
-        viewModel.RefreshRequested -= RefreshRequested;
-        lifetime.Cancel();
-        lifetime.Dispose();
+        foreach (WidgetViewModel viewModel in subscriptions.Keys.ToArray())
+        {
+            Unregister(viewModel);
+        }
     }
 
-    /// <summary>Update saved source choices and synchronize pollers after profile changes.</summary>
-    public async Task SynchronizeAsync(IReadOnlyList<NasProfile> profiles, CancellationToken cancellationToken)
+    /// <summary>Restore one widget source and attach its refresh and selection subscriptions.</summary>
+    public async Task RegisterAsync(WidgetViewModel viewModel,
+        WidgetSettingsStore storage,
+        CancellationToken cancellationToken)
     {
-        Guid? selectedId =
-            initialized ? viewModel.SelectedNas?.Id : await storage.LoadNasSelectionAsync(cancellationToken);
-        initialized = true;
-        synchronizing = true;
-        try
-        {
-            viewModel.AvailableNas.Clear();
-            foreach (NasProfile profile in profiles.OrderBy(profile => profile.Name,
-                         StringComparer.CurrentCultureIgnoreCase))
-            {
-                viewModel.AvailableNas.Add(profile);
-            }
+        ArgumentNullException.ThrowIfNull(viewModel);
+        ArgumentNullException.ThrowIfNull(storage);
+        ObjectDisposedException.ThrowIf(disposed, this);
+        Guid? selectedId = await storage.LoadNasSelectionAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        ObjectDisposedException.ThrowIf(disposed, this);
+        var subscription = new Subscription(storage, selectedId, () => RequestRefresh(viewModel));
+        subscriptions.Add(viewModel, subscription);
+        viewModel.PropertyChanged += SelectionChanged;
+        viewModel.RefreshRequested += subscription.Refresh;
+        ApplyProfiles(viewModel, subscription);
+        Refresh(viewModel);
+    }
 
-            viewModel.SelectedNas = viewModel.AvailableNas.FirstOrDefault(profile => profile.Id == selectedId)
-                                    ?? viewModel.AvailableNas.FirstOrDefault(profile => profile.Enabled);
-        }
-        finally
+    /// <summary>Detach one widget while leaving every NAS poller running for other consumers.</summary>
+    public void Unregister(WidgetViewModel viewModel)
+    {
+        if (!subscriptions.Remove(viewModel, out Subscription? subscription))
         {
-            synchronizing = false;
+            return;
+        }
+
+        viewModel.PropertyChanged -= SelectionChanged;
+        viewModel.RefreshRequested -= subscription.Refresh;
+        subscription.Lifetime.Cancel();
+        subscription.Lifetime.Dispose();
+        if (ReferenceEquals(ActiveWidget, viewModel))
+        {
+            ActiveWidget = null;
+        }
+    }
+
+    /// <summary>Update all source choices and synchronize each NAS poller once after profile changes.</summary>
+    public async Task SynchronizeAsync(IReadOnlyList<NasProfile> configuredProfiles,
+        CancellationToken cancellationToken)
+    {
+        profiles = configuredProfiles.OrderBy(profile => profile.Name,
+            StringComparer.CurrentCultureIgnoreCase).ToArray();
+        foreach ((WidgetViewModel viewModel, Subscription subscription) in subscriptions)
+        {
+            ApplyProfiles(viewModel, subscription);
         }
 
         if (networkEnabled)
         {
-            await monitoring.SynchronizeAsync(profiles, cancellationToken);
+            await monitoring.SynchronizeAsync(configuredProfiles, cancellationToken);
         }
 
         Refresh();
     }
 
-    /// <summary>Connect a saved profile and make it the current widget source.</summary>
+    private void ApplyProfiles(WidgetViewModel viewModel, Subscription subscription)
+    {
+        subscription.Synchronizing = true;
+        try
+        {
+            viewModel.AvailableNas.Clear();
+            foreach (NasProfile profile in profiles)
+            {
+                viewModel.AvailableNas.Add(profile);
+            }
+
+            // A deleted NAS leaves an empty source instead of silently showing another device.
+            viewModel.SelectedNas = profiles.FirstOrDefault(profile => profile.Id == subscription.SelectedId);
+        }
+        finally
+        {
+            subscription.Synchronizing = false;
+        }
+    }
+
+    /// <summary>Connect a saved profile and assign it only to the widget selected before login.</summary>
     public async Task<NasMonitorState> ConnectAsync(NasProfile profile,
         Uri endpoint,
         string? password,
         string? otp,
         CancellationToken cancellationToken)
     {
-        viewModel.SelectedNas = viewModel.AvailableNas.FirstOrDefault(item => item.Id == profile.Id);
+        WidgetViewModel? target = ActiveWidget;
+        if (target is not null && subscriptions.ContainsKey(target))
+        {
+            target.SelectedNas = target.AvailableNas.FirstOrDefault(item => item.Id == profile.Id);
+        }
+
         return await monitoring.ConnectAsync(profile, endpoint, password, otp, cancellationToken);
     }
 
-    /// <summary>Recompute metric age from the shared cache without any HTTP work.</summary>
+    /// <summary>Recompute every widget from cached data without issuing HTTP requests.</summary>
     public void Refresh()
     {
-        if (!disposed && networkEnabled)
+        foreach (WidgetViewModel viewModel in subscriptions.Keys)
         {
-            NasMonitorState? state = viewModel.SelectedNas is { } selected ? monitoring.GetState(selected.Id) : null;
-            viewModel.ApplyMonitoringState(state, DateTimeOffset.UtcNow);
+            Refresh(viewModel);
         }
+    }
+
+    /// <summary>Update one widget, keeping its metric age independent of the editor selection.</summary>
+    public void Refresh(WidgetViewModel viewModel)
+    {
+        if (disposed || !networkEnabled)
+        {
+            return;
+        }
+
+        NasMonitorState? state = viewModel.SelectedNas is { } selected ? monitoring.GetState(selected.Id) : null;
+        viewModel.ApplyMonitoringState(state, DateTimeOffset.UtcNow);
     }
 
     private void StateChanged(NasMonitorState state)
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (!disposed && viewModel.SelectedNas?.Id == state.NasId)
+            if (disposed)
             {
-                Refresh();
+                return;
+            }
+
+            foreach (WidgetViewModel viewModel in subscriptions.Keys)
+            {
+                if (viewModel.SelectedNas?.Id == state.NasId)
+                {
+                    Refresh(viewModel);
+                }
             }
         });
     }
 
-    private async void SelectionChanged(object? sender, PropertyChangedEventArgs args)
+    private void SelectionChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName != nameof(WidgetViewModel.SelectedNas) || synchronizing || disposed)
+        if (args.PropertyName != nameof(WidgetViewModel.SelectedNas) || sender is not WidgetViewModel viewModel ||
+            !subscriptions.TryGetValue(viewModel, out Subscription? subscription) || subscription.Synchronizing ||
+            disposed)
         {
             return;
         }
 
-        Refresh();
+        subscription.SelectedId = viewModel.SelectedNas?.Id;
+        Refresh(viewModel);
+        subscription.PendingSave =
+            SaveSourceAsync(subscription.PendingSave, viewModel, subscription, subscription.SelectedId);
+    }
+
+    private static async Task SaveSourceAsync(Task previousSave,
+        WidgetViewModel viewModel,
+        Subscription subscription,
+        Guid? selectedId)
+    {
+        CancellationToken token = subscription.Lifetime.Token;
         try
         {
-            bool saved = await storage.SaveNasSelectionAsync(viewModel.SelectedNas?.Id, lifetime.Token);
+            // Preserve selection order even when the user switches sources faster than disk writes finish.
+            await previousSave;
+            bool saved = await subscription.Storage.SaveNasSelectionAsync(selectedId, token);
             if (!saved)
             {
                 viewModel.StorageStatus = UiText.Get("LayoutSaveFailed");
             }
         }
-        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
+            // Closing a widget cancels its writes without affecting other subscriptions.
         }
     }
 
-    private async void RefreshRequested()
+    /// <summary>Wait for the latest source selection to reach the widget's settings store.</summary>
+    public Task FlushAsync(WidgetViewModel viewModel, CancellationToken cancellationToken)
     {
-        if (viewModel.SelectedNas is not { } selected || disposed)
+        return subscriptions.TryGetValue(viewModel, out Subscription? subscription)
+            ? subscription.PendingSave.WaitAsync(cancellationToken)
+            : Task.CompletedTask;
+    }
+
+    private async void RequestRefresh(WidgetViewModel viewModel)
+    {
+        if (disposed || !networkEnabled || viewModel.SelectedNas is not { } selected ||
+            !subscriptions.TryGetValue(viewModel, out Subscription? subscription))
         {
             return;
         }
 
         try
         {
-            await monitoring.RefreshAsync(selected.Id, lifetime.Token);
+            await monitoring.RefreshAsync(selected.Id, subscription.Lifetime.Token);
         }
-        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
+        }
+    }
+
+    private sealed class Subscription(WidgetSettingsStore storage, Guid? selectedId, Action refresh)
+    {
+        internal WidgetSettingsStore Storage
+        {
+            get;
+        } = storage;
+
+        internal Guid? SelectedId
+        {
+            get;
+            set;
+        } = selectedId;
+
+        internal Action Refresh
+        {
+            get;
+        } = refresh;
+
+        internal CancellationTokenSource Lifetime
+        {
+            get;
+        } = new();
+
+        internal Task PendingSave
+        {
+            get;
+            set;
+        } = Task.CompletedTask;
+
+        internal bool Synchronizing
+        {
+            get;
+            set;
         }
     }
 }

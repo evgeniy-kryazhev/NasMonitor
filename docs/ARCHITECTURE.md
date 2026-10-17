@@ -50,6 +50,13 @@ Desktop widget и его lifecycle продолжают управляться W
 
 ## Реализованный мониторинг DSM
 
+Несколькими экземплярами управляет WidgetWorkspace. Он восстанавливает каталог
+и создаёт отдельные WidgetViewModel/WidgetController на каждое окно. Общий
+WidgetMonitoringPresenter хранит подписки всех экземпляров, их независимые
+источники и выбранную цель для явного подключения. Manager показывает настройки
+только текущего экземпляра. Каталог и изолированные настройки описаны в
+`MULTIPLE-WIDGETS.md`; общий NasMonitoringCoordinator остаётся единственным.
+
 Core определяет NasMetric, NasSnapshot, NasVolume, NasMonitorState и контракты
 сессии. Providers.Synology содержит общий DsmProtocol и MetricsSessionFactory:
 API discovery, вход, чтение Utilization/System/Storage и ограниченный по времени

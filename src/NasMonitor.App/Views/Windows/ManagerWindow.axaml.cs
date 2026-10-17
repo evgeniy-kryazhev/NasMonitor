@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Styling;
+using NasMonitor.App.Models;
 using NasMonitor.App.Services;
 using NasMonitor.App.ViewModels;
 using NasMonitor.App.Views.Pages;
@@ -15,8 +16,9 @@ public partial class ManagerWindow : Window
 {
     private readonly NasConnectionsView connections = new();
     private readonly NasConnectionsViewModel? connectionsViewModel;
-    private readonly WidgetController? widgetController;
     private readonly WidgetSettingsView widgetSettings = new();
+    private readonly WidgetWorkspace? workspace;
+    private WidgetInstance? editedWidget;
 
     /// <summary>Create the navigation shell.</summary>
     public ManagerWindow()
@@ -26,13 +28,14 @@ public partial class ManagerWindow : Window
     }
 
     /// <summary>Supply the independent page view models and widget controller.</summary>
-    public ManagerWindow(WidgetController controller,
-        WidgetViewModel viewModel,
+    public ManagerWindow(WidgetWorkspace workspace,
         NasConnectionsViewModel connectionsViewModel) : this()
     {
         this.connectionsViewModel = connectionsViewModel;
-        widgetController = controller;
-        widgetSettings.Initialize(controller, viewModel);
+        this.workspace = workspace;
+        widgetSettings.InitializeWorkspace(workspace);
+        workspace.SelectionChanged += SelectWidget;
+        Closed += (_, _) => workspace.SelectionChanged -= SelectWidget;
         connections.DataContext = connectionsViewModel;
         SidebarNas.DataContext = connectionsViewModel;
         Opened += async (_, _) => await connectionsViewModel.InitializeAsync();
@@ -40,14 +43,48 @@ public partial class ManagerWindow : Window
         Closed += (_, _) => widgetSettings.Dispose();
     }
 
-    internal void DisplayLayout(WidgetLayout layout)
+    private WidgetController? widgetController => editedWidget?.Controller;
+
+    private void SelectWidget(WidgetInstance? instance)
     {
-        widgetSettings.DisplayLayout(layout);
+        if (editedWidget is not null)
+        {
+            editedWidget.AppearanceDraft = widgetSettings.CaptureAppearanceDraft();
+        }
+
+        editedWidget = instance;
+        if (instance is null)
+        {
+            widgetSettings.ClearWidget();
+            return;
+        }
+
+        widgetSettings.Initialize(instance.Controller, instance.ViewModel);
+        widgetSettings.DisplayLayout(instance.Controller.CurrentLayout);
+        widgetSettings.DisplayAppearance(instance.AppearanceDraft ?? instance.ViewModel.CurrentAppearance);
     }
 
-    internal void DisplayAppearance(WidgetAppearance appearance)
+    internal void DisplayLayout(WidgetController controller, WidgetLayout layout)
     {
-        widgetSettings.DisplayAppearance(appearance);
+        if (ReferenceEquals(editedWidget?.Controller, controller))
+        {
+            widgetSettings.DisplayLayout(layout);
+        }
+    }
+
+    internal void DisplayAppearance(WidgetController controller, WidgetAppearance appearance)
+    {
+        WidgetInstance? instance =
+            workspace?.Widgets.FirstOrDefault(item => ReferenceEquals(item.Controller, controller));
+        if (instance is not null)
+        {
+            instance.AppearanceDraft = null;
+        }
+
+        if (ReferenceEquals(editedWidget?.Controller, controller))
+        {
+            widgetSettings.DisplayAppearance(appearance);
+        }
     }
 
     internal void OpenConnections()

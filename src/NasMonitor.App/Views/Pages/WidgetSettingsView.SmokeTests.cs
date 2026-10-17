@@ -4,12 +4,26 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
+using NasMonitor.Core.Profiles;
 using NasMonitor.Core.Widgets;
 
 namespace NasMonitor.App.Views.Pages;
 
 public partial class WidgetSettingsView
 {
+    internal void VerifySourceForSmoke(Guid? expectedNasId)
+    {
+        if ((SourceSelector.SelectedItem as NasProfile)?.Id != expectedNasId)
+        {
+            throw new InvalidOperationException("widgets.source-display-failed");
+        }
+    }
+
+    internal void SelectNasForSmoke(NasProfile profile)
+    {
+        SourceSelector.SelectedItem = profile;
+    }
+
     internal async Task VerifyColorPickerFlyoutAsync()
     {
         Button? pickerButton = AppearanceColorPicker.GetVisualDescendants()
