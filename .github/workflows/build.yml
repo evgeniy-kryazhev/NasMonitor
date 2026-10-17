@@ -31,8 +31,8 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - run: dotnet restore src/NasMonitor.App/NasMonitor.App.csproj
-      - run: dotnet build src/NasMonitor.App/NasMonitor.App.csproj --configuration Release --no-restore
+      - run: dotnet restore NasMonitor.sln
+      - run: dotnet build NasMonitor.sln --configuration Release --no-restore
       - run: dotnet test tests/NasMonitor.App.Tests/NasMonitor.App.Tests.csproj --configuration Release --logger "trx;LogFileName=desktop-host.trx"
       - name: Native Win32 and Credential Manager (skipped on other OSes)
         run: dotnet test tests/NasMonitor.NativeTests/NasMonitor.NativeTests.csproj --configuration Release --logger "trx;LogFileName=native-host.trx"

@@ -15,10 +15,11 @@ This is an initial monitoring implementation. Protocol tests use synthetic DSM r
 
 ## Run
 
-Install .NET 10 SDK:
+Install .NET 10 SDK. Open `NasMonitor.sln` in Visual Studio or Rider; choose `NasMonitor.App` as the startup project. From the repository root:
 
 ```bash
-dotnet restore src/NasMonitor.App/NasMonitor.App.csproj
+dotnet restore NasMonitor.sln
+dotnet build NasMonitor.sln -c Release
 dotnet run --project src/NasMonitor.App/NasMonitor.App.csproj
 ```
 
@@ -31,8 +32,7 @@ The NAS certificate must be trusted by the OS. HTTP and redirects are rejected; 
 ## Validate and download
 
 ```bash
-dotnet test tests/NasMonitor.App.Tests/NasMonitor.App.Tests.csproj -c Release
-dotnet test tests/NasMonitor.NativeTests/NasMonitor.NativeTests.csproj -c Release
+dotnet test NasMonitor.sln -c Release
 ```
 
 CI runs shared protocol/monitoring/headless UI tests on Linux, Windows and macOS arm64/x64, real Win32 and Credential Manager checks on Windows, and an NSWindow/AppKit property smoke on macOS. Windows-only tests are explicitly skipped elsewhere. CI provides unsigned self-contained Windows/macOS archives; see [download and desktop validation instructions](docs/DESKTOP_HOSTS.md#automated-native-checks-and-downloadable-builds).
